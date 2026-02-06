@@ -14,6 +14,14 @@ const TOP_BAR_HEIGHT = 48;
 
 const windowTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
 
+interface OtherAppBounds {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 interface AppWindowProps {
   appId: string;
   appType: AppId;
@@ -23,6 +31,7 @@ interface AppWindowProps {
   width: number;
   height: number;
   showMinimize: boolean;
+  otherApps?: OtherAppBounds[];
   children: React.ReactNode;
 }
 
@@ -30,8 +39,45 @@ type ResizeHandle =
   | "n" | "s" | "e" | "w"
   | "ne" | "nw" | "se" | "sw";
 
-export function AppWindow({ appId, appType, title, x, y, width, height, showMinimize, children }: AppWindowProps) {
+const SNAP_GRID_SIZE = 10;
+const MAGNETIC_THRESHOLD = 5;
+
+function snapToGrid(val: number): number {
+  return Math.round(val / SNAP_GRID_SIZE) * SNAP_GRID_SIZE;
+}
+
+function applyMagneticSnap(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  others: OtherAppBounds[]
+): { x: number; y: number } {
+  let outX = x;
+  let outY = y;
+  const threshold = MAGNETIC_THRESHOLD;
+
+  for (const o of others) {
+    const oRight = o.x + o.width;
+    const oBottom = o.y + o.height;
+    const myRight = x + width;
+    const myBottom = y + height;
+
+    if (Math.abs(x - oRight) <= threshold) outX = oRight;
+    if (Math.abs(myRight - o.x) <= threshold) outX = o.x - width;
+    if (Math.abs(x - o.x) <= threshold) outX = o.x;
+
+    if (Math.abs(y - oBottom) <= threshold) outY = oBottom;
+    if (Math.abs(myBottom - o.y) <= threshold) outY = o.y - height;
+    if (Math.abs(y - o.y) <= threshold) outY = o.y;
+  }
+
+  return { x: outX, y: outY };
+}
+
+export function AppWindow({ appId, appType, title, x, y, width, height, showMinimize, otherApps = [], children }: AppWindowProps) {
   const updateAppPosition = useWorkspaceStore((s) => s.updateAppPosition);
+  const snapToGridEnabled = useWorkspaceStore((s) => s.snapToGrid);
   const updateAppSize = useWorkspaceStore((s) => s.updateAppSize);
   const removeApp = useWorkspaceStore((s) => s.removeApp);
   const setMinimized = useWorkspaceStore((s) => s.setMinimized);
@@ -65,8 +111,13 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         const dy = e.clientY - dragStart.y;
         const maxX = Math.max(0, window.innerWidth - width);
         const maxY = Math.max(0, window.innerHeight - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX - height);
-        const newX = Math.max(0, Math.min(dragStart.appX + dx, maxX));
-        const newY = Math.max(0, Math.min(dragStart.appY + dy, maxY));
+        let newX = Math.max(0, Math.min(dragStart.appX + dx, maxX));
+        let newY = Math.max(0, Math.min(dragStart.appY + dy, maxY));
+        const snapped = applyMagneticSnap(newX, newY, width, height, otherApps);
+        newX = snapped.x;
+        newY = snapped.y;
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
         updateAppPosition(appId, newX, newY);
       } else if (isResizing && resizeState) {
         const { handle, startX, startY, startW, startH, startAppX, startAppY } = resizeState;
@@ -97,14 +148,26 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         updateAppSize(appId, newW, newH, newX, newY);
       }
     },
-    [isDragging, dragStart, isResizing, resizeState, appId, width, height, updateAppPosition, updateAppSize]
+    [isDragging, dragStart, isResizing, resizeState, appId, width, height, otherApps, updateAppPosition, updateAppSize]
   );
 
   const handleMouseUp = useCallback(() => {
+    if (isDragging && snapToGridEnabled) {
+      const state = useWorkspaceStore.getState();
+      const config = state.workspaces.find((w) => w.id === state.activeWorkspaceId)?.config;
+      const app = config?.apps.find((a) => a.id === appId);
+      if (app) {
+        const snappedX = snapToGrid(app.x);
+        const snappedY = snapToGrid(app.y);
+        const maxX = Math.max(0, window.innerWidth - width);
+        const maxY = Math.max(0, window.innerHeight - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX - height);
+        updateAppPosition(appId, Math.min(snappedX, maxX), Math.min(snappedY, maxY));
+      }
+    }
     setIsDragging(false);
     setIsResizing(false);
     setResizeState(null);
-  }, []);
+  }, [isDragging, snapToGridEnabled, width, appId, updateAppPosition]);
 
   useEffect(() => {
     if (isDragging || isResizing) {

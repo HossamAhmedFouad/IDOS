@@ -18,4 +18,6 @@ export interface Workspace {
   id: string;
   label?: string;
   config: WorkspaceConfig;
+  isFavorite?: boolean;
+  lastAccessedAt?: number;
 }

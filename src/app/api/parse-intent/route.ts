@@ -24,14 +24,45 @@ Respond ONLY with valid JSON in this exact shape (no markdown, no code blocks):
   "modes": ["focus", "dark", "dnd"]
 }
 
+App type mapping:
+- notes, take notes, writing, document -> notes
+- timer, pomodoro, countdown, focus session -> timer
+- todo, tasks, checklist, project management -> todo
+- code, programming, coding, edit code -> code-editor
+- quiz, study, flashcards, learning, memorize -> quiz
+- email, write email, draft, compose -> email
+- chat, messaging, quick chat -> chat
+- ai chat, assistant, help me with -> ai-chat
+- calendar, schedule, events, time blocking -> calendar
+- files, browse, file browser, organize files -> file-browser
+- whiteboard, brainstorm, diagram, draw -> whiteboard
+- help, explanation, how to, contextual help -> explanation-panel
+
+Mode inference (add to modes array when intent suggests):
+- "dark": night, late, dark theme, reduce eye strain, evening
+- "focus": deep work, studying, coding session, concentration, pomodoro, focus mode, minimize distractions
+- "dnd": meeting, presentation, do not disturb, no interruptions, busy
+
+Layout strategy:
+- "floating": default, free placement, overlapping windows
+- "grid": organized, tidy, side by side (2-4 apps)
+- "split": compare, side by side, two main apps
+- "tiled": many apps, automatic arrangement, maximize space
+
+Examples:
+- "take notes and set a 25 min timer" -> notes + timer, modes: [focus] if studying implied
+- "deep work with notes and timer" -> notes + timer, modes: [focus]
+- "meeting prep: calendar and notes" -> calendar + notes, modes: [dnd]
+- "code and browse files" -> code-editor + file-browser, layoutStrategy: split
+- "study for exam with flashcards and AI help" -> quiz + ai-chat, modes: [focus]
+- "write email draft" -> email with filePath
+- "night coding session" -> code-editor, modes: [dark, focus]
+
 Rules:
-- apps: array of app instances. Use sensible defaults for x, y, width, height based on app type.
-- layoutStrategy: "floating" for free placement, "grid" for organized layouts, "split" for side-by-side, "tiled" for auto-tiling.
-- modes: include "dark" for night/dark theme, "focus" for deep work/studying, "dnd" for meetings.
-- Generate unique ids like "app-notes-1", "app-timer-2".
-- For Notes/Todo/Email apps, add config.filePath (e.g. "/notes/draft.txt").
-- Infer apps from intent: "take notes" -> notes, "timer" -> timer, "todo list" -> todo, "write email" -> email, "chat" -> chat or ai-chat, "code" -> code-editor, "study" -> quiz, "calendar" -> calendar, "browse files" -> file-browser, "whiteboard" -> whiteboard, "help" -> explanation-panel.
-- If intent is vague, default to notes + timer.
+- Generate unique ids: "app-notes-1", "app-timer-2", etc.
+- For Notes, Todo, Email, Code Editor, Quiz: add config.filePath when relevant (e.g. "/notes/draft.txt", "/code/main.js").
+- If intent is vague or empty, default to notes + timer with floating layout.
+- Prefer multiple apps when intent implies several activities (e.g. "notes and timer" -> both).
 `;
 
 const VALID_APP_TYPES: AppId[] = [

@@ -18,8 +18,10 @@ interface WorkspaceState {
   minimizedByWorkspace: Record<string, string[]>;
   activeModes: SystemMode[];
   view: AppView;
+  snapToGrid: boolean;
 
   setView: (view: AppView) => void;
+  setSnapToGrid: (enabled: boolean) => void;
   createWorkspace: (config: WorkspaceConfig, label?: string) => void;
   setActiveWorkspace: (id: string | null) => void;
   removeWorkspace: (id: string) => void;
@@ -32,6 +34,7 @@ interface WorkspaceState {
   setMinimized: (appId: string, minimized: boolean) => void;
   setLayoutStrategy: (strategy: LayoutStrategy) => void;
   setActiveModes: (modes: SystemMode[]) => void;
+  setWorkspaceFavorite: (workspaceId: string, isFavorite: boolean) => void;
 }
 
 function generateAppId(): string {
@@ -77,8 +80,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       minimizedByWorkspace: {},
       activeModes: ["dark"],
       view: "home",
+      snapToGrid: false,
 
       setView: (view) => set({ view }),
+      setSnapToGrid: (enabled) => set({ snapToGrid: enabled }),
 
       createWorkspace: (config, label) =>
         set((state) => {
@@ -87,7 +92,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             label != null && label.trim()
               ? label.trim().slice(0, WORKSPACE_LABEL_MAX_LEN)
               : undefined;
-          const workspace: Workspace = { id, label: truncatedLabel, config };
+          const workspace: Workspace = {
+            id,
+            label: truncatedLabel,
+            config,
+            lastAccessedAt: Date.now(),
+          };
           return {
             workspaces: [...state.workspaces, workspace],
             activeWorkspaceId: id,
@@ -105,11 +115,22 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const exists = state.workspaces.some((w) => w.id === id);
           if (!exists) return state;
           const workspace = state.workspaces.find((w) => w.id === id);
+          const now = Date.now();
           return {
             activeWorkspaceId: id,
             activeModes: workspace?.config.modes ?? state.activeModes,
+            workspaces: state.workspaces.map((w) =>
+              w.id === id ? { ...w, lastAccessedAt: now } : w
+            ),
           };
         }),
+
+      setWorkspaceFavorite: (workspaceId, isFavorite) =>
+        set((state) => ({
+          workspaces: state.workspaces.map((w) =>
+            w.id === workspaceId ? { ...w, isFavorite } : w
+          ),
+        })),
 
       removeWorkspace: (id) =>
         set((state) => {
@@ -292,6 +313,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         minimizedByWorkspace: state.minimizedByWorkspace,
         activeModes: state.activeModes,
         view: state.view,
+        snapToGrid: state.snapToGrid,
       }),
       migrate: (persisted, version) => {
         const p = persisted as Record<string, unknown> | null;
@@ -335,9 +357,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             minimizedByWorkspace,
             activeModes: old.activeModes ?? ["dark"],
             view: old.view ?? "home",
+            snapToGrid: false,
           } as WorkspaceState;
         }
-        return persisted as WorkspaceState;
+        const merged = persisted as Record<string, unknown>;
+        return {
+          ...merged,
+          snapToGrid: merged?.snapToGrid ?? false,
+        } as WorkspaceState;
       },
     }
   )

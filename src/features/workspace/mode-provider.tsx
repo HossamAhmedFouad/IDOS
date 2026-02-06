@@ -18,6 +18,16 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
       html.classList.remove("dark");
       html.removeAttribute("data-theme");
     }
+    if (activeModes.includes("focus")) {
+      html.setAttribute("data-focus", "true");
+    } else {
+      html.removeAttribute("data-focus");
+    }
+    if (activeModes.includes("dnd")) {
+      html.setAttribute("data-dnd", "true");
+    } else {
+      html.removeAttribute("data-dnd");
+    }
   }, [activeModes]);
 
   return <>{children}</>;

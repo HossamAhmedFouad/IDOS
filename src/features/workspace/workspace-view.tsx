@@ -11,8 +11,10 @@ import { AppRenderer } from "./app-renderer";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, LayoutGrid, Plus, Pencil, Trash2 } from "lucide-react";
+import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { LayoutStrategy } from "@/lib/types/layout";
 
 const TOP_BAR_HEIGHT = 48;
 
@@ -30,6 +32,11 @@ export function WorkspaceView() {
     (s) => s.updateActiveWorkspaceConfig
   );
   const setView = useWorkspaceStore((s) => s.setView);
+  const setLayoutStrategy = useWorkspaceStore((s) => s.setLayoutStrategy);
+  const layoutStrategy = workspace.layoutStrategy;
+  const snapToGrid = useWorkspaceStore((s) => s.snapToGrid);
+  const setSnapToGrid = useWorkspaceStore((s) => s.setSnapToGrid);
+  const setWorkspaceFavorite = useWorkspaceStore((s) => s.setWorkspaceFavorite);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -62,13 +69,16 @@ export function WorkspaceView() {
   }, []);
 
   const isDark = activeModes.includes("dark");
+  const isFocus = activeModes.includes("focus");
+  const isDnd = activeModes.includes("dnd");
   useEffect(() => {
     document.documentElement.classList.toggle("dark", isDark);
   }, [isDark]);
 
-  const toggleDark = () => {
+  const toggleMode = (mode: "dark" | "focus" | "dnd") => {
+    const active = activeModes.includes(mode);
     setActiveModes(
-      isDark ? activeModes.filter((m) => m !== "dark") : [...activeModes, "dark"]
+      active ? activeModes.filter((m) => m !== mode) : [...activeModes, mode]
     );
   };
 
@@ -115,6 +125,15 @@ export function WorkspaceView() {
     [workspace, viewport.width, viewport.height]
   );
 
+  const sortedWorkspaces = [...workspaces].sort((a, b) => {
+    const aFav = a.isFavorite ? 1 : 0;
+    const bFav = b.isFavorite ? 1 : 0;
+    if (aFav !== bFav) return bFav - aFav;
+    const aTime = a.lastAccessedAt ?? 0;
+    const bTime = b.lastAccessedAt ?? 0;
+    return bTime - aTime;
+  });
+
   const noWorkspaces = workspaces.length === 0;
   const hasActiveWorkspace = activeWorkspaceId != null;
 
@@ -135,7 +154,7 @@ export function WorkspaceView() {
           </Button>
           {workspaces.length > 0 && (
             <div className="flex items-center gap-1 overflow-x-auto">
-              {workspaces.map((w) => (
+              {sortedWorkspaces.map((w) => (
                 <div
                   key={w.id}
                   className={cn(
@@ -184,6 +203,21 @@ export function WorkspaceView() {
                       >
                         <Pencil className="size-3.5" />
                       </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWorkspaceFavorite(w.id, !w.isFavorite);
+                        }}
+                        className={cn(
+                          "shrink-0 rounded p-0.5",
+                          w.isFavorite ? "text-amber-500" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                        aria-label={w.isFavorite ? "Unfavorite" : "Favorite"}
+                        title={w.isFavorite ? "Unfavorite" : "Add to favorites"}
+                      >
+                        <Star className={cn("size-3.5", w.isFavorite && "fill-current")} />
+                      </button>
                     </>
                   )}
                   <button
@@ -215,27 +249,116 @@ export function WorkspaceView() {
             New
           </Button>
           {hasActiveWorkspace && layoutResult.apps.length > 0 && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={clearWorkspace}
-              className="shrink-0 text-muted-foreground hover:text-foreground"
-            >
-              Clear workspace
-            </Button>
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={clearWorkspace}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+              >
+                Clear workspace
+              </Button>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                    title="Layout"
+                  >
+                    <Layout className="size-4" />
+                    <span className="capitalize">{layoutStrategy}</span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-48 p-2">
+                  <div className="mb-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                    Layout
+                  </div>
+                  {(["floating", "grid", "split", "tiled"] as LayoutStrategy[]).map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setLayoutStrategy(s)}
+                      className={cn(
+                        "w-full rounded px-3 py-2 text-left text-sm capitalize",
+                        layoutStrategy === s
+                          ? "bg-primary/10 text-primary"
+                          : "hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                  <div className="mt-2 border-t border-border pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setSnapToGrid(!snapToGrid)}
+                      className={cn(
+                        "w-full rounded px-3 py-2 text-left text-sm",
+                        snapToGrid ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-foreground"
+                      )}
+                    >
+                      Snap to grid
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </>
           )}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={toggleDark}
-          className="shrink-0 text-muted-foreground hover:text-foreground"
-        >
-          {isDark ? "Light" : "Dark"}
-        </Button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleMode("focus")}
+            title="Focus mode"
+            className={cn(
+              "shrink-0 text-muted-foreground hover:text-foreground",
+              isFocus && "bg-primary/10 text-primary"
+            )}
+          >
+            Focus
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleMode("dnd")}
+            title="Do Not Disturb"
+            className={cn(
+              "shrink-0 text-muted-foreground hover:text-foreground",
+              isDnd && "bg-primary/10 text-primary"
+            )}
+          >
+            DND
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleMode("dark")}
+            className={cn(
+              "shrink-0 text-muted-foreground hover:text-foreground",
+              isDark && "bg-primary/10 text-primary"
+            )}
+          >
+            {isDark ? "Light" : "Dark"}
+          </Button>
+        </div>
       </div>
+
+      {/* DND status indicator overlay */}
+      {isDnd && (
+        <div
+          className="pointer-events-none absolute bottom-16 right-4 z-50 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400"
+          aria-hidden
+        >
+          Do Not Disturb
+        </div>
+      )}
 
       {/* App windows container - offset for top bar and taskbar */}
       <div

@@ -1,5 +1,6 @@
 "use client";
 
+import { Suspense } from "react";
 import { AnimatePresence } from "framer-motion";
 import type { SystemMode } from "@/lib/types";
 import type { LayoutResult } from "./layout-engine";
@@ -7,6 +8,14 @@ import { getAppComponent } from "@/apps/registry";
 import { AppWindow } from "@/components/app-window";
 import { getAppName } from "@/lib/constants/app-catalog";
 import { useWorkspaceStore, selectMinimizedAppIds } from "@/store/use-workspace-store";
+
+function AppLoadingFallback() {
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      <span className="text-sm text-muted-foreground">Loading...</span>
+    </div>
+  );
+}
 
 interface AppRendererProps {
   layoutResult: LayoutResult;
@@ -32,6 +41,7 @@ export function AppRenderer({ layoutResult, activeModes }: AppRendererProps) {
           activeModes,
           config: app.config,
         };
+        const otherApps = allApps.filter((a) => a.id !== app.id);
         return (
           <AppWindow
             key={app.id}
@@ -43,8 +53,11 @@ export function AppRenderer({ layoutResult, activeModes }: AppRendererProps) {
             width={app.width}
             height={app.height}
             showMinimize={showMinimize}
+            otherApps={otherApps}
           >
-            <Component {...appProps} />
+            <Suspense fallback={<AppLoadingFallback />}>
+              <Component {...appProps} />
+            </Suspense>
           </AppWindow>
         );
       })}

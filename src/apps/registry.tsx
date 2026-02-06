@@ -1,13 +1,9 @@
 "use client";
 
+import React from "react";
 import type { AppId, AppProps } from "@/lib/types";
 import { APP_DEFAULT_SIZES } from "@/lib/constants/app-defaults";
 import { getAppName } from "@/lib/constants/app-catalog";
-import { NotesApp } from "./notes";
-import { TimerApp } from "./timer";
-import { TodoApp } from "./todo";
-import { AIChatApp } from "./ai-chat";
-import { EmailApp } from "./email";
 
 export interface AppMetadata {
   defaultWidth: number;
@@ -15,26 +11,31 @@ export interface AppMetadata {
   supportedModes?: string[];
 }
 
-const APP_COMPONENTS: Record<AppId, React.ComponentType<AppProps>> = {
-  notes: NotesApp,
-  timer: TimerApp,
-  todo: TodoApp,
-  "code-editor": PlaceholderApp,
-  quiz: PlaceholderApp,
-  email: EmailApp,
-  chat: PlaceholderApp,
-  calendar: PlaceholderApp,
-  "file-browser": PlaceholderApp,
-  whiteboard: PlaceholderApp,
-  "ai-chat": AIChatApp,
-  "explanation-panel": PlaceholderApp,
+const lazy = (loader: () => Promise<{ default: React.ComponentType<AppProps> }>) =>
+  React.lazy(loader);
+
+const APP_COMPONENTS: Record<AppId, React.LazyExoticComponent<React.ComponentType<AppProps>>> = {
+  notes: lazy(() => import("./notes").then((m) => ({ default: m.NotesApp }))),
+  timer: lazy(() => import("./timer").then((m) => ({ default: m.TimerApp }))),
+  todo: lazy(() => import("./todo").then((m) => ({ default: m.TodoApp }))),
+  "code-editor": lazy(() => import("./code-editor").then((m) => ({ default: m.CodeEditorApp }))),
+  quiz: lazy(() => import("./quiz").then((m) => ({ default: m.QuizApp }))),
+  email: lazy(() => import("./email").then((m) => ({ default: m.EmailApp }))),
+  chat: lazy(() => import("./chat").then((m) => ({ default: m.ChatApp }))),
+  calendar: lazy(() => import("./calendar").then((m) => ({ default: m.CalendarApp }))),
+  "file-browser": lazy(() => import("./file-browser").then((m) => ({ default: m.FileBrowserApp }))),
+  whiteboard: lazy(() => import("./whiteboard").then((m) => ({ default: m.WhiteboardApp }))),
+  "ai-chat": lazy(() => import("./ai-chat").then((m) => ({ default: m.AIChatApp }))),
+  "explanation-panel": lazy(() =>
+    import("./explanation-panel").then((m) => ({ default: m.ExplanationPanelApp }))
+  ),
 };
 
 function PlaceholderApp({ appType }: AppProps) {
   const name = getAppName(appType);
   return (
     <div className="flex h-full items-center justify-center p-4">
-      <span className="text-zinc-500 dark:text-zinc-400">{name} (Phase 2)</span>
+      <span className="text-zinc-500 dark:text-zinc-400">{name}</span>
     </div>
   );
 }
