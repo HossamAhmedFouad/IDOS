@@ -27,6 +27,9 @@ const LOADING_MESSAGES = [
 
 export function HomeView() {
   const setView = useWorkspaceStore((s) => s.setView);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
   const [loading, setLoading] = useState(false);
   const [intentLength, setIntentLength] = useState(0);
   const [blobCenter, setBlobCenter] = useState<{ x: number; y: number } | null>(
@@ -93,8 +96,20 @@ export function HomeView() {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => setView("workspace")}
-          className="gap-2 text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            if (workspaces.length === 0) return;
+            setView("workspace");
+            if (activeWorkspaceId === null && workspaces[0]) {
+              setActiveWorkspace(workspaces[0].id);
+            }
+          }}
+          disabled={workspaces.length === 0}
+          className="gap-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
+          title={
+            workspaces.length === 0
+              ? "Create an intent to add a workspace"
+              : "Switch to workspace"
+          }
         >
           <LayoutGrid className="size-4" />
           Workspace

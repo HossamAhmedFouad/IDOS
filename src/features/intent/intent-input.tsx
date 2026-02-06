@@ -3,6 +3,7 @@
 import type { LucideIcon } from "lucide-react";
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
+import type { WorkspaceConfig } from "@/lib/types/workspace";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,8 +32,8 @@ export function IntentInput({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
-  const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
-  const pushHistory = useWorkspaceStore((s) => s.pushHistory);
+  const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -45,9 +46,11 @@ export function IntentInput({
       setError(null);
 
       if (!text) {
-        // No intent: brief delay then transition to workspace
+        // No intent: if we have workspaces, go to workspace; else stay on home
         setTimeout(() => {
-          onSuccess?.();
+          if (workspaces.length > 0) {
+            onSuccess?.();
+          }
           setLoading(false);
         }, 800);
         return;
@@ -59,14 +62,22 @@ export function IntentInput({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ intent: text }),
         });
-        const data = await res.json();
+        let data: { error?: string; workspace?: unknown } = {};
+        try {
+          data = await res.json();
+        } catch {
+          data = { error: "Invalid response from server" };
+        }
         if (!res.ok) {
-          throw new Error(data.error ?? "Failed to parse intent");
+          const message =
+            typeof data.error === "string"
+              ? data.error
+              : "Failed to parse intent";
+          throw new Error(message);
         }
         const workspace = data.workspace;
-        if (workspace) {
-          setWorkspace(workspace);
-          pushHistory(workspace);
+        if (workspace && typeof workspace === "object" && "apps" in workspace) {
+          createWorkspace(workspace as WorkspaceConfig, text);
         }
         onSuccess?.();
       } catch (err) {
@@ -75,7 +86,7 @@ export function IntentInput({
         setLoading(false);
       }
     },
-    [intent, loading, setWorkspace, pushHistory, onSubmitting, onSuccess]
+    [intent, loading, createWorkspace, workspaces.length, onSubmitting, onSuccess]
   );
 
   return (
@@ -103,6 +114,7 @@ export function IntentInput({
           onChange={(e) => {
             const v = e.target.value;
             setIntent(v);
+            if (error) setError(null);
             onIntentChange?.(v);
           }}
           onFocus={() => setFocused(true)}
@@ -128,13 +140,14 @@ export function IntentInput({
         </Button>
       </motion.div>
       {error && (
-        <motion.span
+        <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute left-0 right-0 top-full mt-2 text-sm text-destructive"
+          className="absolute left-0 right-0 top-full z-10 mt-2 max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          role="alert"
         >
-          {error}
-        </motion.span>
+          <p className="whitespace-pre-wrap break-words">{error}</p>
+        </motion.div>
       )}
     </motion.form>
   );

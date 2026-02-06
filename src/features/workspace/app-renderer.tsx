@@ -6,7 +6,7 @@ import type { LayoutResult } from "./layout-engine";
 import { getAppComponent } from "@/apps/registry";
 import { AppWindow } from "@/components/app-window";
 import { getAppName } from "@/lib/constants/app-catalog";
-import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useWorkspaceStore, selectMinimizedAppIds } from "@/store/use-workspace-store";
 
 interface AppRendererProps {
   layoutResult: LayoutResult;
@@ -14,7 +14,7 @@ interface AppRendererProps {
 }
 
 export function AppRenderer({ layoutResult, activeModes }: AppRendererProps) {
-  const minimizedAppIds = useWorkspaceStore((s) => s.minimizedAppIds);
+  const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
   const allApps = layoutResult.apps;
   const visibleApps = allApps.filter((app) => !minimizedAppIds.includes(app.id));
   const showMinimize = allApps.length > 1;

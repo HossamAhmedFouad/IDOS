@@ -4,7 +4,11 @@ import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid, Search } from "lucide-react";
-import { useWorkspaceStore } from "@/store/use-workspace-store";
+import {
+  useWorkspaceStore,
+  selectActiveWorkspaceConfig,
+  selectMinimizedAppIds,
+} from "@/store/use-workspace-store";
 import { APP_CATALOG } from "@/lib/constants/app-catalog";
 import { getAppIcon } from "@/lib/constants/app-icons";
 import type { AppId } from "@/lib/types";
@@ -22,8 +26,8 @@ export function Taskbar() {
   const setMinimized = useWorkspaceStore((s) => s.setMinimized);
   const setView = useWorkspaceStore((s) => s.setView);
   const view = useWorkspaceStore((s) => s.view);
-  const workspace = useWorkspaceStore((s) => s.workspace);
-  const minimizedAppIds = useWorkspaceStore((s) => s.minimizedAppIds);
+  const workspace = useWorkspaceStore(selectActiveWorkspaceConfig);
+  const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
 
   const openAppTypes = new Set(
     workspace.apps.filter((a) => !minimizedAppIds.includes(a.id)).map((a) => a.type)
