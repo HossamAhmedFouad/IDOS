@@ -34,6 +34,18 @@ async function ensureParentDir(path: string): Promise<void> {
   // Just ensure we can list the parent. No-op for now.
 }
 
+/** Hidden placeholder file used to mark empty directories. Filtered from listDirectory. */
+const DIR_PLACEHOLDER = ".idos-dir";
+
+export async function createDirectory(path: string): Promise<void> {
+  const normalized = normalizePath(path);
+  const placeholderPath = normalized.endsWith("/")
+    ? normalized + DIR_PLACEHOLDER
+    : normalized + "/" + DIR_PLACEHOLDER;
+  await ensureParentDir(placeholderPath);
+  await idb.set(placeholderPath, "");
+}
+
 export async function listDirectory(path: string): Promise<string[]> {
   const normalized = normalizePath(path);
   const dirPrefix = normalized.endsWith("/") ? normalized : normalized + "/";
@@ -43,7 +55,7 @@ export async function listDirectory(path: string): Promise<string[]> {
   for (const fullPath of allKeys) {
     const relative = fullPath.slice(dirPrefix.length);
     const firstSegment = relative.split("/")[0];
-    if (firstSegment) seen.add(firstSegment);
+    if (firstSegment && firstSegment !== DIR_PLACEHOLDER) seen.add(firstSegment);
   }
   return Array.from(seen).sort();
 }

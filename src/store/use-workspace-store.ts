@@ -29,6 +29,7 @@ interface WorkspaceState {
   updateActiveWorkspaceConfig: (config: WorkspaceConfig) => void;
   updateAppPosition: (appId: string, x: number, y: number) => void;
   updateAppSize: (appId: string, width: number, height: number, x?: number, y?: number) => void;
+  updateAppConfig: (appId: string, partialConfig: Partial<AppInstance["config"]>) => void;
   addApp: (type: AppId, config?: AppInstance["config"]) => void;
   removeApp: (appId: string) => void;
   setMinimized: (appId: string, minimized: boolean) => void;
@@ -225,6 +226,29 @@ export const useWorkspaceStore = create<WorkspaceState>()(
                       ...w.config,
                       apps: w.config.apps.map((app) =>
                         app.id === appId ? { ...app, ...updates } : app
+                      ),
+                    },
+                  }
+                : w
+            ),
+          };
+        }),
+
+      updateAppConfig: (appId, partialConfig) =>
+        set((state) => {
+          const active = getActiveWorkspace(state);
+          if (!active) return state;
+          return {
+            workspaces: state.workspaces.map((w) =>
+              w.id === active.id
+                ? {
+                    ...w,
+                    config: {
+                      ...w.config,
+                      apps: w.config.apps.map((app) =>
+                        app.id === appId
+                          ? { ...app, config: { ...app.config, ...partialConfig } }
+                          : app
                       ),
                     },
                   }
