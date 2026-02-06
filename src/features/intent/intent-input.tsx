@@ -1,12 +1,21 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import type { WorkspaceConfig } from "@/lib/types/workspace";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+const PLACEHOLDER_MESSAGES = [
+  "Take notes and set a 25 min timer...",
+  "Create a todo list for my project...",
+  "Start a coding session with AI chat...",
+  "Write a quick note and set a reminder...",
+  "Open notes, timer, and todo together...",
+  "I need to focus—notes and pomodoro timer...",
+];
 
 export interface IntentInputProps {
   /** Called when submit starts (before API call or transition). */
@@ -32,8 +41,51 @@ export function IntentInput({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [placeholderText, setPlaceholderText] = useState("");
+  const [isDeletingPlaceholder, setIsDeletingPlaceholder] = useState(false);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+
+  useEffect(() => {
+    if (intent.length > 0 || loading) return;
+
+    const full = PLACEHOLDER_MESSAGES[placeholderIndex];
+    const typeSpeed = 50;
+    const deleteSpeed = 30;
+    const pauseAfterType = 2500;
+    const pauseBeforeDelete = 600;
+
+    let delay: number;
+    if (isDeletingPlaceholder) {
+      delay = deleteSpeed;
+    } else if (placeholderText.length === full.length) {
+      delay = pauseAfterType;
+    } else if (placeholderText.length === 0) {
+      delay = pauseBeforeDelete;
+    } else {
+      delay = typeSpeed;
+    }
+
+    const t = setTimeout(() => {
+      if (isDeletingPlaceholder) {
+        if (placeholderText.length === 0) {
+          setIsDeletingPlaceholder(false);
+          setPlaceholderIndex((i) => (i + 1) % PLACEHOLDER_MESSAGES.length);
+        } else {
+          setPlaceholderText((prev) => prev.slice(0, -1));
+        }
+      } else {
+        if (placeholderText.length === full.length) {
+          setIsDeletingPlaceholder(true);
+        } else {
+          setPlaceholderText(full.slice(0, placeholderText.length + 1));
+        }
+      }
+    }, delay);
+
+    return () => clearTimeout(t);
+  }, [intent.length, loading, placeholderIndex, placeholderText, isDeletingPlaceholder]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -92,13 +144,13 @@ export function IntentInput({
   return (
     <motion.form
       onSubmit={handleSubmit}
-      className="relative flex w-full max-w-2xl gap-2"
+      className="relative flex w-full max-w-4xl gap-2"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
     >
       <motion.div
-        className="flex flex-1 gap-2 rounded-xl border bg-card/80 shadow-lg backdrop-blur-md transition-[box-shadow,border-color]"
+        className="flex flex-1 items-center gap-3 rounded-xl border bg-card/80 p-3 shadow-lg backdrop-blur-md transition-[box-shadow,border-color]"
         animate={{
           scale: focused ? 1.02 : 1,
           boxShadow: focused
@@ -108,24 +160,40 @@ export function IntentInput({
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
-        <Input
-          type="text"
-          value={intent}
-          onChange={(e) => {
-            const v = e.target.value;
-            setIntent(v);
-            if (error) setError(null);
-            onIntentChange?.(v);
-          }}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          placeholder="Describe what you want to do... (e.g. 'Take notes and set a 25 min timer')"
-          disabled={loading}
-          className="flex-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
-        />
+        <div className="relative min-h-12 flex-1">
+          <Input
+            type="text"
+            value={intent}
+            onChange={(e) => {
+              const v = e.target.value;
+              setIntent(v);
+              if (error) setError(null);
+              onIntentChange?.(v);
+            }}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            disabled={loading}
+            className="min-h-12 w-full border-0 bg-transparent py-3 text-base shadow-none focus-visible:ring-0 md:text-lg"
+          />
+          {intent.length === 0 && !loading && (
+            <div
+              className="pointer-events-none absolute inset-0 flex items-center px-3"
+              aria-hidden
+            >
+              <span className="truncate text-base text-muted-foreground md:text-lg">
+                {placeholderText}
+                <motion.span
+                  animate={{ opacity: [1, 0] }}
+                  transition={{ duration: 0.6, repeat: Infinity }}
+                  className="ml-0.5 inline-block h-4 w-0.5 -translate-y-px align-middle bg-muted-foreground"
+                />
+              </span>
+            </div>
+          )}
+        </div>
         <Button
           type="submit"
-          disabled={loading}
+          disabled={loading || !intent.trim()}
           size={SubmitIcon ? "icon" : undefined}
           className={SubmitIcon ? "rounded-lg shrink-0" : "rounded-lg px-6 shrink-0"}
           aria-label={SubmitIcon ? (submitLabel ?? "Submit") : undefined}

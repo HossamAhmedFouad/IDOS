@@ -7,6 +7,7 @@ import {
   readFile,
   writeFile,
   deleteFile,
+  deleteDirectory,
   createDirectory,
 } from "@/lib/file-system";
 import { Folder, File, Trash2, FolderPlus, FilePlus, Search } from "lucide-react";
@@ -171,15 +172,33 @@ export function FileBrowserApp({ config }: AppProps) {
 
   const handleDelete = useCallback(
     async (path: string, isDir: boolean) => {
-      if (isDir) return;
-      if (!confirm(`Delete ${path}?`)) return;
+      const message = isDir
+        ? `Delete folder "${path}" and all its contents?`
+        : `Delete ${path}?`;
+      if (!confirm(message)) return;
       try {
-        await deleteFile(path);
-        if (previewPath === path) {
-          setPreviewPath(null);
-          setPreviewContent("");
+        if (isDir) {
+          await deleteDirectory(path);
+          if (previewPath && (previewPath === path || previewPath.startsWith(path + "/"))) {
+            setPreviewPath(null);
+            setPreviewContent("");
+          }
+          if (currentPath === path || currentPath.startsWith(path + "/")) {
+            const parts = path.split("/").filter(Boolean);
+            const parent = parts.length <= 1 ? "/" : "/" + parts.slice(0, -1).join("/");
+            setCurrentPath(parent);
+            loadDir(parent);
+          } else {
+            loadDir(currentPath);
+          }
+        } else {
+          await deleteFile(path);
+          if (previewPath === path) {
+            setPreviewPath(null);
+            setPreviewContent("");
+          }
+          loadDir(currentPath);
         }
-        loadDir(currentPath);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete");
       }
@@ -341,16 +360,14 @@ export function FileBrowserApp({ config }: AppProps) {
                     )}
                     <span className="truncate">{e.name}</span>
                   </button>
-                  {!e.isDir && (
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(e.path, e.isDir)}
-                      className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      aria-label="Delete"
-                    >
-                      <Trash2 className="size-3.5" />
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(e.path, e.isDir)}
+                    className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    aria-label={e.isDir ? "Delete folder" : "Delete file"}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
                 </li>
               ))}
             </ul>

@@ -123,7 +123,7 @@ export function HomeView() {
       >
         <div
           ref={intentContainerRef}
-          className="pointer-events-auto relative w-full max-w-2xl px-4"
+          className="pointer-events-auto relative w-full max-w-4xl px-4"
         >
           <IntentBlob
             ref={blobRef}

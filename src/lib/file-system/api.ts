@@ -65,6 +65,22 @@ export async function deleteFile(path: string): Promise<void> {
   await idb.remove(normalized);
 }
 
+/** Recursively deletes a directory and all its contents (files and subdirectories). */
+export async function deleteDirectory(path: string): Promise<void> {
+  const normalized = normalizePath(path);
+  const dirPrefix = normalized.endsWith("/") ? normalized : normalized + "/";
+  const allKeys = await idb.keys(dirPrefix);
+  for (const fullPath of allKeys) {
+    await idb.remove(fullPath);
+  }
+  const placeholderPath = dirPrefix + DIR_PLACEHOLDER;
+  try {
+    await idb.remove(placeholderPath);
+  } catch {
+    // Placeholder may not exist for dirs that had files
+  }
+}
+
 export async function moveFile(oldPath: string, newPath: string): Promise<void> {
   const oldNorm = normalizePath(oldPath);
   const newNorm = normalizePath(newPath);
