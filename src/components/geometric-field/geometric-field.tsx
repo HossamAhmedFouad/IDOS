@@ -22,6 +22,12 @@ const PADDING = 40;
 const GRID_SPACING = 42;
 const HEX_RADIUS = 28;
 const DOTS_SPACING = 36;
+const GRID_INFLUENCE_RADIUS = 220;
+const GRID_MAX_DISPLACEMENT = 14;
+const GRID_LERP = 0.08;
+const HEX_INFLUENCE_RADIUS = 200;
+const HEX_MAX_DISPLACEMENT = 18;
+const HEX_LERP = 0.07;
 
 interface Point {
   baseX: number;
@@ -97,6 +103,72 @@ function getEdges(points: Point[]): [number, number][] {
   });
 }
 
+/** Warp a base point toward mouse; returns displaced x, y and updates dx, dy in place. */
+function applyMouseWarp(
+  baseX: number,
+  baseY: number,
+  mouseX: number,
+  mouseY: number,
+  influenceRadius: number,
+  maxDisplacement: number,
+  lerp: number,
+  state: { dx: number; dy: number }
+): { x: number; y: number } {
+  const dx = mouseX - baseX;
+  const dy = mouseY - baseY;
+  const d = Math.sqrt(dx * dx + dy * dy);
+
+  let targetDx = 0;
+  let targetDy = 0;
+  if (d < influenceRadius && d > 0) {
+    const influence = 1 - d / influenceRadius;
+    const strength = influence * influence * maxDisplacement;
+    targetDx = (dx / d) * strength;
+    targetDy = (dy / d) * strength;
+  }
+
+  state.dx += (targetDx - state.dx) * lerp;
+  state.dy += (targetDy - state.dy) * lerp;
+  return { x: baseX + state.dx, y: baseY + state.dy };
+}
+
+interface WarpPoint {
+  baseX: number;
+  baseY: number;
+  x: number;
+  y: number;
+  dx: number;
+  dy: number;
+}
+
+/** Build grid points for given canvas size. */
+function getGridPoints(width: number, height: number): WarpPoint[][] {
+  const rows: WarpPoint[][] = [];
+  for (let y = 0; y <= height + GRID_SPACING; y += GRID_SPACING) {
+    const row: WarpPoint[] = [];
+    for (let x = 0; x <= width + GRID_SPACING; x += GRID_SPACING) {
+      row.push({ baseX: x, baseY: y, x, y, dx: 0, dy: 0 });
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
+/** Build hexagon centers for given canvas size. */
+function getHexCenters(width: number, height: number): WarpPoint[] {
+  const r = HEX_RADIUS;
+  const vert = r * Math.sqrt(3);
+  const centers: WarpPoint[] = [];
+  for (let row = -1; row * (r * 1.5) < height + r * 2; row++) {
+    for (let col = -1; col * (vert * 2) < width + vert * 2; col++) {
+      const baseX = col * vert * 2 + (row % 2 === 0 ? 0 : vert);
+      const baseY = row * r * 1.5;
+      centers.push({ baseX, baseY, x: baseX, y: baseY, dx: 0, dy: 0 });
+    }
+  }
+  return centers;
+}
+
 /** Draw a single hexagon centered at (cx, cy) with radius r. */
 function drawHexagon(
   ctx: CanvasRenderingContext2D,
@@ -120,6 +192,9 @@ export function GeometricField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointsRef = useRef<Point[]>([]);
   const edgesRef = useRef<[number, number][]>([]);
+  const gridPointsRef = useRef<WarpPoint[][]>([]);
+  const hexCentersRef = useRef<WarpPoint[]>([]);
+  const lastSizeRef = useRef({ w: 0, h: 0 });
   const mouseRef = useRef({ x: -1e6, y: -1e6 });
   const rafRef = useRef<number>(0);
   const timeRef = useRef(0);
@@ -154,31 +229,73 @@ export function GeometricField() {
     ctx.lineWidth = shape === "mesh" ? 0.9 : 0.8;
 
     if (shape === "grid") {
-      for (let x = 0; x <= width + GRID_SPACING; x += GRID_SPACING) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, height);
-        ctx.stroke();
+      let grid = gridPointsRef.current;
+      if (grid.length === 0 || lastSizeRef.current.w !== width || lastSizeRef.current.h !== height) {
+        lastSizeRef.current = { w: width, h: height };
+        grid = getGridPoints(width, height);
+        gridPointsRef.current = grid;
       }
-      for (let y = 0; y <= height + GRID_SPACING; y += GRID_SPACING) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
+      for (let row = 0; row < grid.length; row++) {
+        for (let col = 0; col < grid[row].length; col++) {
+          const p = grid[row][col];
+          const { x, y } = applyMouseWarp(
+            p.baseX,
+            p.baseY,
+            mouse.x,
+            mouse.y,
+            GRID_INFLUENCE_RADIUS,
+            GRID_MAX_DISPLACEMENT,
+            GRID_LERP,
+            p
+          );
+          p.x = x;
+          p.y = y;
+        }
+      }
+      for (let row = 0; row < grid.length; row++) {
+        const r = grid[row];
+        for (let col = 0; col < r.length - 1; col++) {
+          ctx.beginPath();
+          ctx.moveTo(r[col].x, r[col].y);
+          ctx.lineTo(r[col + 1].x, r[col + 1].y);
+          ctx.stroke();
+        }
+      }
+      for (let row = 0; row < grid.length - 1; row++) {
+        for (let col = 0; col < grid[row].length; col++) {
+          ctx.beginPath();
+          ctx.moveTo(grid[row][col].x, grid[row][col].y);
+          ctx.lineTo(grid[row + 1][col].x, grid[row + 1][col].y);
+          ctx.stroke();
+        }
       }
       rafRef.current = requestAnimationFrame(draw);
       return;
     }
 
     if (shape === "hexagons") {
+      let hexes = hexCentersRef.current;
+      if (hexes.length === 0 || lastSizeRef.current.w !== width || lastSizeRef.current.h !== height) {
+        lastSizeRef.current = { w: width, h: height };
+        hexes = getHexCenters(width, height);
+        hexCentersRef.current = hexes;
+      }
       const r = HEX_RADIUS;
-      const vert = r * Math.sqrt(3);
-      for (let row = -1; row * (r * 1.5) < height + r * 2; row++) {
-        for (let col = -1; col * (vert * 2) < width + vert * 2; col++) {
-          const cx = col * vert * 2 + (row % 2 === 0 ? 0 : vert);
-          const cy = row * r * 1.5;
-          drawHexagon(ctx, cx, cy, r);
-        }
+      for (let i = 0; i < hexes.length; i++) {
+        const p = hexes[i];
+        const { x, y } = applyMouseWarp(
+          p.baseX,
+          p.baseY,
+          mouse.x,
+          mouse.y,
+          HEX_INFLUENCE_RADIUS,
+          HEX_MAX_DISPLACEMENT,
+          HEX_LERP,
+          p
+        );
+        p.x = x;
+        p.y = y;
+        drawHexagon(ctx, x, y, r);
       }
       rafRef.current = requestAnimationFrame(draw);
       return;

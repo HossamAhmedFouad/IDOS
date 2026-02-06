@@ -154,14 +154,6 @@
   }
 }
 
-/* Focus mode: reduce visual clutter, dim non-essential UI */
-[data-focus="true"] .focus-mode-dim {
-  opacity: 0.6;
-}
-[data-focus="true"] [data-focus-hide] {
-  opacity: 0.3;
-}
-
 /* DND mode: visual indicator available via [data-dnd="true"] */
 
 /* Quiz app: 3D flip card */

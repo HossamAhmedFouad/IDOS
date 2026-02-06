@@ -21,7 +21,7 @@ Respond ONLY with valid JSON in this exact shape (no markdown, no code blocks):
     }
   ],
   "layoutStrategy": "floating|grid|split|tiled",
-  "modes": ["focus", "dark", "dnd"]
+  "modes": ["dark", "dnd"]
 }
 
 App type mapping:
@@ -39,7 +39,6 @@ App type mapping:
 
 Mode inference (add to modes array when intent suggests):
 - "dark": night, late, dark theme, reduce eye strain, evening
-- "focus": deep work, studying, coding session, concentration, pomodoro, focus mode, minimize distractions
 - "dnd": meeting, presentation, do not disturb, no interruptions, busy
 
 Layout strategy:
@@ -49,13 +48,13 @@ Layout strategy:
 - "tiled": many apps, automatic arrangement, maximize space
 
 Examples:
-- "take notes and set a 25 min timer" -> notes + timer, modes: [focus] if studying implied
-- "deep work with notes and timer" -> notes + timer, modes: [focus]
+- "take notes and set a 25 min timer" -> notes + timer
+- "deep work with notes and timer" -> notes + timer
 - "meeting prep: calendar and notes" -> calendar + notes, modes: [dnd]
 - "code and browse files" -> code-editor + file-browser, layoutStrategy: split
-- "study for exam with flashcards and AI help" -> quiz + ai-chat, modes: [focus]
+- "study for exam with flashcards and AI help" -> quiz + ai-chat
 - "write email draft" -> email with filePath
-- "night coding session" -> code-editor, modes: [dark, focus]
+- "night coding session" -> code-editor, modes: [dark]
 
 Rules:
 - Generate unique ids: "app-notes-1", "app-timer-2", etc.
@@ -69,7 +68,7 @@ const VALID_APP_TYPES: AppId[] = [
   "calendar", "file-browser", "whiteboard", "ai-chat", "explanation-panel",
 ];
 const VALID_LAYOUTS: LayoutStrategy[] = ["floating", "grid", "split", "tiled"];
-const VALID_MODES: SystemMode[] = ["focus", "dark", "dnd"];
+const VALID_MODES: SystemMode[] = ["dark", "dnd"];
 
 function validateAndSanitize(config: unknown): WorkspaceConfig {
   if (!config || typeof config !== "object") {

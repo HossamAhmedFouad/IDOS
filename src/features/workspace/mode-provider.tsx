@@ -11,11 +11,6 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const html = document.documentElement;
-    if (activeModes.includes("focus")) {
-      html.setAttribute("data-focus", "true");
-    } else {
-      html.removeAttribute("data-focus");
-    }
     if (activeModes.includes("dnd")) {
       html.setAttribute("data-dnd", "true");
     } else {

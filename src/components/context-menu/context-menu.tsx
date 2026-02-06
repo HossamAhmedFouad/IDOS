@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
+import { AboutModal } from "@/components/about-modal";
 
 type MenuItem = {
   id: string;
@@ -23,31 +24,28 @@ type MenuItem = {
 
 function getMenuItems(
   setView: (v: "home" | "workspace") => void,
-  openPersonalization: () => void
+  openPersonalization: () => void,
+  openAbout: () => void
 ): MenuItem[] {
   return [
     { id: "home", label: "Home", icon: Home, action: () => setView("home") },
     { id: "personalization", label: "Personalization", icon: Palette, action: openPersonalization },
     { id: "refresh", label: "Refresh", icon: RefreshCw, action: () => window.location.reload() },
-    {
-      id: "about",
-      label: "About IDOS",
-      icon: Info,
-      action: () =>
-        alert("IDOS — Intent-Driven OS\n\nAn operating system driven by your intent, built for the web."),
-    },
+    { id: "about", label: "About IDOS", icon: Info, action: openAbout },
   ];
 }
 
 export function CustomContextMenu() {
   const [open, setOpen] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const setView = useWorkspaceStore((s) => s.setView);
   const setPersonalizationPanelOpen = usePersonalizationStore((s) => s.setPersonalizationPanelOpen);
   const openPersonalization = useCallback(() => {
     setPersonalizationPanelOpen(true);
   }, [setPersonalizationPanelOpen]);
-  const defaultItems = getMenuItems(setView, openPersonalization);
+  const openAbout = useCallback(() => setAboutOpen(true), []);
+  const defaultItems = getMenuItems(setView, openPersonalization, openAbout);
 
   const onContextMenu = useCallback((e: MouseEvent) => {
     e.preventDefault();
@@ -84,54 +82,57 @@ export function CustomContextMenu() {
   );
 
   return (
-    <AnimatePresence>
-      {open && (
-        <>
-          <motion.div
-            className="fixed inset-0 z-[9998]"
+    <>
+      <AboutModal open={aboutOpen} onOpenChange={setAboutOpen} />
+      <AnimatePresence>
+        {open && (
+          <>
+            <motion.div
+              className="fixed inset-0 z-[9998]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={close}
-            aria-hidden
-          />
-          <motion.div
-            role="menu"
-            aria-label="IDOS context menu"
-            className="fixed z-[9999] min-w-[200px] rounded-xl border border-border bg-popover/95 p-1.5 shadow-xl backdrop-blur-md"
-            style={{ left: position.x, top: position.y }}
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            transition={{ duration: 0.12 }}
-          >
-            <div className="mb-2 flex items-center gap-2 border-b border-border/80 px-2.5 py-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/20 text-primary">
-                <Sparkles className="h-4 w-4" />
+              onClick={close}
+              aria-hidden
+            />
+            <motion.div
+              role="menu"
+              aria-label="IDOS context menu"
+              className="fixed z-[9999] min-w-[200px] rounded-xl border border-border bg-popover/95 p-1.5 shadow-xl backdrop-blur-md"
+              style={{ left: position.x, top: position.y }}
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.96 }}
+              transition={{ duration: 0.12 }}
+            >
+              <div className="mb-2 flex items-center gap-2 border-b border-border/80 px-2.5 py-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                  <Sparkles className="h-4 w-4" />
+                </div>
+                <span className="text-sm font-semibold text-foreground">IDOS</span>
               </div>
-              <span className="text-sm font-semibold text-foreground">IDOS</span>
-            </div>
-            <ul className="space-y-0.5">
-              {defaultItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                      onClick={() => handleAction(item)}
-                    >
-                      <Icon className="h-4 w-4 shrink-0 opacity-80" />
-                      {item.label}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
+              <ul className="space-y-0.5">
+                {defaultItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => handleAction(item)}
+                      >
+                        <Icon className="h-4 w-4 shrink-0 opacity-80" />
+                        {item.label}
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

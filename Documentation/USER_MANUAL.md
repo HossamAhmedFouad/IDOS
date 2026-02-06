@@ -27,17 +27,15 @@ You can request multiple apps in one intent:
 
 The system infers modes from your intent:
 
-- **Focus mode**: "deep work", "studying", "coding session", "pomodoro"
 - **Dark mode**: "night", "late", "dark theme"
 - **Do Not Disturb**: "meeting", "presentation", "no interruptions"
 
-Example: "deep work with notes and timer" → Notes + Timer with Focus mode enabled.
+Example: "meeting prep with calendar and notes" → Calendar + Notes with DND enabled.
 
 ## System Modes
 
 Use the top bar to toggle modes:
 
-- **Focus** – Dims non-essential UI to reduce distractions
 - **DND** – Shows a Do Not Disturb indicator; use during meetings or presentations
 - **Dark / Light** – Toggles dark theme
 

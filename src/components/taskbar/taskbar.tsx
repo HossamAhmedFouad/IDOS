@@ -100,7 +100,7 @@ export function Taskbar() {
       initial={{ y: TASKBAR_HEIGHT }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-1 border-t border-border/80 bg-background/90 pt-2 pb-5 backdrop-blur-md focus-mode-dim transition-opacity"
+      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-1 border-t border-border/80 bg-background/90 pt-2 pb-5 backdrop-blur-md transition-opacity"
       style={{ height: TASKBAR_HEIGHT }}
     >
       <div className="flex items-center gap-2 rounded-lg px-2">

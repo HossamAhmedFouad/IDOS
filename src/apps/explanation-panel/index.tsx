@@ -12,7 +12,7 @@ const TIPS = [
   {
     icon: Lightbulb,
     title: "Use system modes",
-    text: "Toggle Dark mode for night work, Focus mode for deep work, and Do Not Disturb for meetings.",
+    text: "Toggle Dark mode for night work and Do Not Disturb for meetings.",
   },
   {
     icon: BookOpen,
@@ -21,9 +21,7 @@ const TIPS = [
   },
 ];
 
-export function ExplanationPanelApp({ activeModes }: AppProps) {
-  const isFocus = activeModes?.includes("focus");
-
+export function ExplanationPanelApp({ activeModes: _activeModes }: AppProps) {
   return (
     <div className="flex h-full flex-col overflow-auto p-4">
       <h3 className="mb-4 text-sm font-semibold text-foreground">
@@ -35,9 +33,7 @@ export function ExplanationPanelApp({ activeModes }: AppProps) {
           return (
             <li
               key={i}
-              className={`rounded-lg border p-4 ${
-                isFocus ? "border-border bg-muted/50" : "border-border bg-card"
-              }`}
+              className="rounded-lg border border-border bg-card p-4"
             >
               <div className="mb-2 flex items-center gap-2">
                 <Icon className="size-4 text-primary" aria-hidden />

@@ -322,7 +322,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           };
         }),
 
-      setActiveModes: (modes) => set({ activeModes: modes }),
+      setActiveModes: (modes) =>
+        set({
+          activeModes: modes.filter((m): m is SystemMode => m === "dark" || m === "dnd"),
+        }),
     }),
     {
       name: "idos-workspace",
@@ -381,8 +384,11 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           } as WorkspaceState;
         }
         const merged = persisted as Record<string, unknown>;
+        const rawModes = (merged?.activeModes as SystemMode[] | undefined) ?? [];
+        const activeModes = rawModes.filter((m): m is SystemMode => m === "dark" || m === "dnd");
         return {
           ...merged,
+          activeModes,
           snapToGrid: merged?.snapToGrid ?? false,
         } as WorkspaceState;
       },

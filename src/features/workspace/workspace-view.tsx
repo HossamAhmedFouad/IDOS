@@ -75,10 +75,9 @@ export function WorkspaceView() {
     return () => window.removeEventListener("resize", updateViewport);
   }, []);
 
-  const isFocus = activeModes.includes("focus");
   const isDnd = activeModes.includes("dnd");
 
-  const toggleMode = (mode: "focus" | "dnd") => {
+  const toggleMode = (mode: "dnd") => {
     const active = activeModes.includes(mode);
     setActiveModes(
       active ? activeModes.filter((m) => m !== mode) : [...activeModes, mode]
@@ -319,19 +318,6 @@ export function WorkspaceView() {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => toggleMode("focus")}
-            title="Focus mode"
-            className={cn(
-              "shrink-0 text-muted-foreground hover:text-foreground",
-              isFocus && "bg-primary/10 text-primary"
-            )}
-          >
-            Focus
-          </Button>
           <Button
             type="button"
             variant="ghost"
