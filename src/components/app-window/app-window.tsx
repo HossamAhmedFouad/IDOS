@@ -1,8 +1,14 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT } from "@/lib/constants/app-defaults";
+import { TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
+
+const TOP_BAR_HEIGHT = 48;
 
 interface AppWindowProps {
   appId: string;
@@ -44,14 +50,13 @@ export function AppWindow({ appId, title, x, y, width, height, children }: AppWi
     [x, y]
   );
 
-  const TOP_BAR_HEIGHT = 56;
   const handleMouseMove = useCallback(
     (e: MouseEvent) => {
       if (isDragging) {
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
         const maxX = Math.max(0, window.innerWidth - width);
-        const maxY = Math.max(0, window.innerHeight - TOP_BAR_HEIGHT - height);
+        const maxY = Math.max(0, window.innerHeight - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX - height);
         const newX = Math.max(0, Math.min(dragStart.appX + dx, maxX));
         const newY = Math.max(0, Math.min(dragStart.appY + dy, maxY));
         updateAppPosition(appId, newX, newY);
@@ -125,8 +130,12 @@ export function AppWindow({ appId, title, x, y, width, height, children }: AppWi
   const resizeHandles: ResizeHandle[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
 
   return (
-    <div
-      className="absolute overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-lg dark:border-zinc-700 dark:bg-zinc-900"
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.96 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="absolute overflow-hidden rounded-xl border border-border bg-card shadow-xl"
       style={{
         left: x,
         top: y,
@@ -136,33 +145,33 @@ export function AppWindow({ appId, title, x, y, width, height, children }: AppWi
         minHeight: MIN_WINDOW_HEIGHT,
       }}
     >
-      {/* Title bar - drag area */}
+      {/* Title bar - drag area, glassy */}
       <div
-        className={`flex cursor-grab items-center justify-between border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800 ${isDragging ? "cursor-grabbing" : ""}`}
+        className={`flex cursor-grab items-center justify-between border-b border-border/80 bg-muted/60 px-3 py-2 backdrop-blur-sm ${isDragging ? "cursor-grabbing" : ""}`}
         onMouseDown={handleDragStart}
       >
-        <span className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+        <span className="text-sm font-medium text-foreground">
           {title}
         </span>
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
+          className="size-7 shrink-0"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             removeApp(appId);
           }}
           onMouseDown={(e) => e.stopPropagation()}
-          className="ml-2 rounded p-1 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-600 dark:hover:text-zinc-100"
           aria-label="Close"
         >
-          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+          <X className="size-4" />
+        </Button>
       </div>
 
       {/* App content */}
-      <div className="h-[calc(100%-40px)] overflow-auto">{children}</div>
+      <div className="h-[calc(100%-40px)] overflow-auto bg-card">{children}</div>
 
       {/* Resize handles */}
       {resizeHandles.map((handle) => (
@@ -175,7 +184,7 @@ export function AppWindow({ appId, title, x, y, width, height, children }: AppWi
           onMouseDown={handleResizeStart(handle)}
         />
       ))}
-    </div>
+    </motion.div>
   );
 }
 

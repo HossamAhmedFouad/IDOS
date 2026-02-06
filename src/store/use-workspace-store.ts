@@ -10,11 +10,15 @@ import { APP_DEFAULT_SIZES } from "@/lib/constants/app-defaults";
 
 const MAX_HISTORY = 10;
 
+export type AppView = "home" | "workspace";
+
 interface WorkspaceState {
   workspace: WorkspaceConfig;
   history: WorkspaceConfig[];
   activeModes: SystemMode[];
+  view: AppView;
 
+  setView: (view: AppView) => void;
   setWorkspace: (config: WorkspaceConfig) => void;
   updateAppPosition: (appId: string, x: number, y: number) => void;
   updateAppSize: (appId: string, width: number, height: number, x?: number, y?: number) => void;
@@ -41,7 +45,10 @@ export const useWorkspaceStore = create<WorkspaceState>()(
     (set) => ({
       workspace: defaultWorkspace,
       history: [],
-      activeModes: [],
+      activeModes: ["dark"],
+      view: "home",
+
+      setView: (view) => set({ view }),
 
       setWorkspace: (config) =>
         set((state) => ({
