@@ -284,7 +284,7 @@ function getResizeHandleStyle(
   width: number,
   height: number
 ): React.CSSProperties {
-  const size = 8;
+  const size = 4;
   const half = size / 2;
   const isCorner = handle.length === 2;
   const w = isCorner ? size : handle.includes("e") || handle.includes("w") ? size : width - size * 2;
