@@ -15,7 +15,7 @@ import type { AppId } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-const TASKBAR_HEIGHT = 56;
+const TASKBAR_HEIGHT = 84;
 const MAX_DESK_APPS = 8;
 const DEFAULT_PINNED: AppId[] = ["notes", "timer", "todo", "ai-chat"];
 
@@ -100,10 +100,29 @@ export function Taskbar() {
       initial={{ y: TASKBAR_HEIGHT }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-1 border-t border-border/80 bg-background/90 py-2 backdrop-blur-md focus-mode-dim transition-opacity"
+      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-1 border-t border-border/80 bg-background/90 pt-2 pb-5 backdrop-blur-md focus-mode-dim transition-opacity"
       style={{ height: TASKBAR_HEIGHT }}
     >
       <div className="flex items-center gap-2 rounded-lg px-2">
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.12 }}
+          whileTap={{ scale: 0.96 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+          className={cn(
+            "flex size-14 shrink-0 items-center justify-center rounded-xl transition-colors -ml-2 mr-2",
+            pickerOpen
+              ? "bg-primary/20 text-primary"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+          onClick={() => setPickerOpen(true)}
+          aria-label="All apps"
+        >
+          <LayoutGrid className="size-7" />
+        </motion.button>
+
+        <div className="h-10 w-px bg-border/60" aria-hidden />
+
         {deskApps.map((app) => {
           const Icon = getAppIcon(app.id);
           const isOpen = openAppTypes.has(app.id);
@@ -119,7 +138,7 @@ export function Taskbar() {
               whileTap={{ scale: 0.96 }}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className={cn(
-                "flex size-12 items-center justify-center rounded-xl transition-colors",
+                "flex size-14 items-center justify-center rounded-xl transition-colors",
                 isActive
                   ? "bg-primary/20 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -128,27 +147,10 @@ export function Taskbar() {
               title={hasMinimized ? `Restore ${app.name}` : app.name}
               aria-label={hasMinimized ? `Restore ${app.name}` : `Open ${app.name}`}
             >
-              <Icon className="size-6" />
+              <Icon className="size-7" />
             </motion.button>
           );
         })}
-
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.12 }}
-          whileTap={{ scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className={cn(
-            "flex size-12 items-center justify-center rounded-xl transition-colors",
-            pickerOpen
-              ? "bg-primary/20 text-primary"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
-          )}
-          onClick={() => setPickerOpen(true)}
-          aria-label="All apps"
-        >
-          <LayoutGrid className="size-6" />
-        </motion.button>
 
         {typeof document !== "undefined" &&
           createPortal(
@@ -170,7 +172,7 @@ export function Taskbar() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="w-[360px] max-h-[80vh] overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl"
+                    className="w-[520px] max-h-[80vh] overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center gap-2 border-b border-border/60 px-3 py-3">
@@ -184,21 +186,21 @@ export function Taskbar() {
                         autoFocus
                       />
                     </div>
-                    <div className="grid max-h-[340px] grid-cols-3 gap-2 overflow-y-auto p-3">
+                    <div className="grid max-h-[400px] grid-cols-5 gap-3 overflow-y-auto p-4">
                       {filteredApps.map((app) => (
                         <motion.button
                           key={app.id}
                           type="button"
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.98 }}
-                          className="flex flex-col items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-3 py-4 text-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-accent/60"
+                          className="flex min-w-0 flex-col items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-3 py-4 text-sm font-medium text-foreground transition-colors hover:border-primary/50 hover:bg-accent/60"
                           onClick={() => handlePickerSelect(app.id)}
                         >
                           {(() => {
                             const Icon = getAppIcon(app.id);
                             return <Icon className="size-5 text-primary" />;
                           })()}
-                          <span className="truncate text-xs">{app.name}</span>
+                          <span className="min-w-0 w-full break-words text-center text-xs line-clamp-2">{app.name}</span>
                         </motion.button>
                       ))}
                     </div>
