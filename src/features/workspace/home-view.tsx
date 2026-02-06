@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid, Play } from "lucide-react";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { IntentInput } from "@/features/intent/intent-input";
 import { IntentBlob } from "@/components/intent-blob";
 import { ParticleBackground } from "@/components/particle-background";
@@ -30,6 +31,9 @@ export function HomeView() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
+  const backgroundType = usePersonalizationStore((s) => s.backgroundType);
+  const particleSystem = usePersonalizationStore((s) => s.particleSystem);
+  const particleShape = usePersonalizationStore((s) => s.particleShape);
   const [loading, setLoading] = useState(false);
   const [intentLength, setIntentLength] = useState(0);
   const [blobCenter, setBlobCenter] = useState<{ x: number; y: number } | null>(
@@ -83,12 +87,16 @@ export function HomeView() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Background particles */}
-      <ParticleBackground
-        intentLength={intentLength}
-        loading={loading}
-        blobCenter={blobCenter}
-      />
+      {/* Background particles (when personalization allows) */}
+      {backgroundType === "particles" && (
+        <ParticleBackground
+          intentLength={intentLength}
+          loading={loading}
+          blobCenter={blobCenter}
+          particleSystem={particleSystem}
+          particleShape={particleShape}
+        />
+      )}
 
       {/* Top bar: Workspace button */}
       <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">

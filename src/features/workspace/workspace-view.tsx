@@ -6,8 +6,10 @@ import {
   selectActiveWorkspaceConfig,
   defaultWorkspaceConfig,
 } from "@/store/use-workspace-store";
+import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { computeLayout } from "./layout-engine";
 import { AppRenderer } from "./app-renderer";
+import { ParticleBackground } from "@/components/particle-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +39,9 @@ export function WorkspaceView() {
   const snapToGrid = useWorkspaceStore((s) => s.snapToGrid);
   const setSnapToGrid = useWorkspaceStore((s) => s.setSnapToGrid);
   const setWorkspaceFavorite = useWorkspaceStore((s) => s.setWorkspaceFavorite);
+  const backgroundType = usePersonalizationStore((s) => s.backgroundType);
+  const particleSystem = usePersonalizationStore((s) => s.particleSystem);
+  const particleShape = usePersonalizationStore((s) => s.particleShape);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +140,13 @@ export function WorkspaceView() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      {backgroundType === "particles" && (
+        <ParticleBackground
+          intentLength={0}
+          particleSystem={particleSystem}
+          particleShape={particleShape}
+        />
+      )}
       {/* Thin top bar: Home, Workspace switcher, Clear, Dark toggle */}
       <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
         <div className="flex min-w-0 shrink items-center gap-2">

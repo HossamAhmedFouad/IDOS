@@ -83,6 +83,63 @@
   --sidebar-ring: oklch(0.6 0.22 265);
 }
 
+/* IDOS: Theme presets — override primary/accent/chart by hue */
+[data-theme="violet"] {
+  --primary: oklch(0.6 0.22 265);
+  --ring: oklch(0.6 0.22 265);
+  --chart-1: oklch(0.6 0.22 265);
+  --chart-2: oklch(0.55 0.18 265);
+  --chart-3: oklch(0.5 0.2 265);
+  --chart-4: oklch(0.65 0.2 265);
+  --chart-5: oklch(0.55 0.18 265);
+  --sidebar-primary: oklch(0.6 0.22 265);
+  --sidebar-ring: oklch(0.6 0.22 265);
+}
+[data-theme="blue"] {
+  --primary: oklch(0.55 0.22 250);
+  --ring: oklch(0.55 0.22 250);
+  --chart-1: oklch(0.6 0.22 250);
+  --chart-2: oklch(0.55 0.18 250);
+  --chart-3: oklch(0.5 0.2 250);
+  --chart-4: oklch(0.65 0.2 250);
+  --chart-5: oklch(0.55 0.18 250);
+  --sidebar-primary: oklch(0.55 0.22 250);
+  --sidebar-ring: oklch(0.55 0.22 250);
+}
+[data-theme="green"] {
+  --primary: oklch(0.6 0.2 145);
+  --ring: oklch(0.6 0.2 145);
+  --chart-1: oklch(0.6 0.22 145);
+  --chart-2: oklch(0.55 0.18 145);
+  --chart-3: oklch(0.5 0.2 145);
+  --chart-4: oklch(0.65 0.2 145);
+  --chart-5: oklch(0.55 0.18 145);
+  --sidebar-primary: oklch(0.6 0.2 145);
+  --sidebar-ring: oklch(0.6 0.2 145);
+}
+[data-theme="rose"] {
+  --primary: oklch(0.65 0.2 350);
+  --ring: oklch(0.65 0.2 350);
+  --chart-1: oklch(0.65 0.22 350);
+  --chart-2: oklch(0.6 0.18 350);
+  --chart-3: oklch(0.55 0.2 350);
+  --chart-4: oklch(0.7 0.2 350);
+  --chart-5: oklch(0.6 0.18 350);
+  --sidebar-primary: oklch(0.65 0.2 350);
+  --sidebar-ring: oklch(0.65 0.2 350);
+}
+[data-theme="amber"] {
+  --primary: oklch(0.75 0.18 75);
+  --ring: oklch(0.75 0.18 75);
+  --chart-1: oklch(0.75 0.2 75);
+  --chart-2: oklch(0.7 0.16 75);
+  --chart-3: oklch(0.65 0.18 75);
+  --chart-4: oklch(0.8 0.18 75);
+  --chart-5: oklch(0.7 0.16 75);
+  --sidebar-primary: oklch(0.75 0.18 75);
+  --sidebar-ring: oklch(0.75 0.18 75);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
