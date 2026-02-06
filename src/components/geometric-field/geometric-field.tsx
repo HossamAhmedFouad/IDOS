@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { usePersonalizationStore } from "@/store/use-personalization-store";
+import {
+  usePersonalizationStore,
+  type GeometricShape as GeometricShapeType,
+} from "@/store/use-personalization-store";
 import { THEME_PRIMARY_RGB } from "@/lib/constants/theme-colors";
 
 const NUM_POINTS = 100;
@@ -16,6 +19,9 @@ const FLOAT_AMPLITUDE_MAX = 6;
 const FLOAT_SPEED_MIN = 0.0004;
 const FLOAT_SPEED_MAX = 0.001;
 const PADDING = 40;
+const GRID_SPACING = 42;
+const HEX_RADIUS = 28;
+const DOTS_SPACING = 36;
 
 interface Point {
   baseX: number;
@@ -91,6 +97,25 @@ function getEdges(points: Point[]): [number, number][] {
   });
 }
 
+/** Draw a single hexagon centered at (cx, cy) with radius r. */
+function drawHexagon(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  r: number
+) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i++) {
+    const angle = (Math.PI / 3) * i - Math.PI / 6;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+}
+
 export function GeometricField() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const pointsRef = useRef<Point[]>([]);
@@ -99,10 +124,13 @@ export function GeometricField() {
   const rafRef = useRef<number>(0);
   const timeRef = useRef(0);
   const themeId = usePersonalizationStore((s) => s.themeId);
+  const geometricShape = usePersonalizationStore((s) => s.geometricShape);
   const strokeRef = useRef("");
+  const shapeRef = useRef<GeometricShapeType>(geometricShape);
 
   const rgb = THEME_PRIMARY_RGB[themeId];
   strokeRef.current = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${OPACITY})`;
+  shapeRef.current = geometricShape;
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
@@ -115,9 +143,60 @@ export function GeometricField() {
     const width = rect.width;
     const height = rect.height;
     const mouse = mouseRef.current;
+    const shape = shapeRef.current;
     timeRef.current += 1;
     const t = timeRef.current;
+    const stroke = strokeRef.current;
 
+    ctx.clearRect(0, 0, width, height);
+    ctx.strokeStyle = stroke;
+    ctx.fillStyle = stroke;
+    ctx.lineWidth = shape === "mesh" ? 0.9 : 0.8;
+
+    if (shape === "grid") {
+      for (let x = 0; x <= width + GRID_SPACING; x += GRID_SPACING) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= height + GRID_SPACING; y += GRID_SPACING) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      rafRef.current = requestAnimationFrame(draw);
+      return;
+    }
+
+    if (shape === "hexagons") {
+      const r = HEX_RADIUS;
+      const vert = r * Math.sqrt(3);
+      for (let row = -1; row * (r * 1.5) < height + r * 2; row++) {
+        for (let col = -1; col * (vert * 2) < width + vert * 2; col++) {
+          const cx = col * vert * 2 + (row % 2 === 0 ? 0 : vert);
+          const cy = row * r * 1.5;
+          drawHexagon(ctx, cx, cy, r);
+        }
+      }
+      rafRef.current = requestAnimationFrame(draw);
+      return;
+    }
+
+    if (shape === "dots") {
+      for (let x = PADDING; x < width - PADDING; x += DOTS_SPACING) {
+        for (let y = PADDING; y < height - PADDING; y += DOTS_SPACING) {
+          ctx.beginPath();
+          ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      rafRef.current = requestAnimationFrame(draw);
+      return;
+    }
+
+    // shape === "mesh"
     if (pointsRef.current.length === 0) {
       pointsRef.current = getRandomMeshPoints(width, height);
       edgesRef.current = getEdges(pointsRef.current);
@@ -125,7 +204,6 @@ export function GeometricField() {
 
     const points = pointsRef.current;
     const edges = edgesRef.current;
-    const stroke = strokeRef.current;
 
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
@@ -152,10 +230,6 @@ export function GeometricField() {
       p.y = p.baseY + p.dy + floatY;
     }
 
-    ctx.clearRect(0, 0, width, height);
-    ctx.strokeStyle = stroke;
-    ctx.lineWidth = 0.9;
-
     for (const [i, j] of edges) {
       const a = points[i];
       const b = points[j];
@@ -165,7 +239,6 @@ export function GeometricField() {
       ctx.stroke();
     }
 
-    ctx.fillStyle = stroke;
     for (let i = 0; i < points.length; i++) {
       const p = points[i];
       ctx.beginPath();

@@ -9,6 +9,7 @@ import { IntentInput } from "@/features/intent/intent-input";
 import { IntentBlob } from "@/components/intent-blob";
 import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
+import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
 
@@ -88,18 +89,18 @@ export function HomeView() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Geometric field (mouse-reactive grid) */}
-      <GeometricField />
-      {/* Background particles (when personalization allows) */}
-      {backgroundType === "particles" && (
-        <ParticleBackground
-          intentLength={intentLength}
-          loading={loading}
-          blobCenter={blobCenter}
-          particleSystem={particleSystem}
-          particleShape={particleShape}
-        />
-      )}
+      {/* Wallpaper (can coexist with particles) */}
+      {backgroundType === "wallpaper" && <WallpaperBackground />}
+      {/* Geometric field (mesh / grid / hexagons / dots) */}
+      {backgroundType === "geometric" && <GeometricField />}
+      {/* Particles always on */}
+      <ParticleBackground
+        intentLength={intentLength}
+        loading={loading}
+        blobCenter={blobCenter}
+        particleSystem={particleSystem}
+        particleShape={particleShape}
+      />
 
       {/* Top bar: Workspace button */}
       <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
