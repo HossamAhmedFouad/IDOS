@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { IntentInput } from "@/features/intent/intent-input";
+import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 
 export function HomeView() {
   const setView = useWorkspaceStore((s) => s.setView);
@@ -16,8 +17,11 @@ export function HomeView() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
-      {/* Chat / intent area centered */}
-      <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center">
+      {/* Chat / intent area centered, above taskbar */}
+      <div
+        className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex items-center justify-center"
+        style={{ bottom: TASKBAR_HEIGHT_PX }}
+      >
         <div className="pointer-events-auto w-full max-w-2xl px-4">
           <IntentInput
             submitLabel="Start"
@@ -61,6 +65,9 @@ export function HomeView() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Taskbar on home too */}
+      <Taskbar />
     </div>
   );
 }

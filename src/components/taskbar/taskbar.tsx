@@ -12,8 +12,29 @@ const TASKBAR_HEIGHT = 56;
 
 export function Taskbar() {
   const addApp = useWorkspaceStore((s) => s.addApp);
+  const setMinimized = useWorkspaceStore((s) => s.setMinimized);
+  const setView = useWorkspaceStore((s) => s.setView);
+  const view = useWorkspaceStore((s) => s.view);
   const workspace = useWorkspaceStore((s) => s.workspace);
-  const openAppTypes = new Set(workspace.apps.map((a) => a.type));
+  const minimizedAppIds = useWorkspaceStore((s) => s.minimizedAppIds);
+
+  const openAppTypes = new Set(
+    workspace.apps.filter((a) => !minimizedAppIds.includes(a.id)).map((a) => a.type)
+  );
+
+  const handleAppClick = (appId: AppId) => {
+    const minimizedOfType = workspace.apps.filter(
+      (a) => a.type === appId && minimizedAppIds.includes(a.id)
+    );
+    if (minimizedOfType.length > 0) {
+      setMinimized(minimizedOfType[0].id, false);
+    } else {
+      addApp(appId);
+    }
+    if (view === "home") {
+      setView("workspace");
+    }
+  };
 
   return (
     <motion.div
@@ -27,6 +48,10 @@ export function Taskbar() {
         {APP_CATALOG.map((app) => {
           const Icon = getAppIcon(app.id);
           const isOpen = openAppTypes.has(app.id);
+          const hasMinimized = workspace.apps.some(
+            (a) => a.type === app.id && minimizedAppIds.includes(a.id)
+          );
+          const isActive = isOpen || hasMinimized;
           return (
             <Button
               key={app.id}
@@ -35,13 +60,13 @@ export function Taskbar() {
               size="icon"
               className={cn(
                 "size-12 rounded-xl transition-colors",
-                isOpen
+                isActive
                   ? "bg-primary/20 text-primary"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
               )}
-              onClick={() => addApp(app.id)}
-              title={app.name}
-              aria-label={`Open ${app.name}`}
+              onClick={() => handleAppClick(app.id)}
+              title={hasMinimized ? `Restore ${app.name}` : app.name}
+              aria-label={hasMinimized ? `Restore ${app.name}` : `Open ${app.name}`}
             >
               <Icon className="size-6" />
             </Button>

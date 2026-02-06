@@ -4,19 +4,25 @@ import React, { useCallback, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT } from "@/lib/constants/app-defaults";
+import { getAppIcon } from "@/lib/constants/app-icons";
 import { TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import type { AppId } from "@/lib/types";
+import { Minus, X } from "lucide-react";
 
 const TOP_BAR_HEIGHT = 48;
 
+const windowTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
+
 interface AppWindowProps {
   appId: string;
+  appType: AppId;
   title: string;
   x: number;
   y: number;
   width: number;
   height: number;
+  showMinimize: boolean;
   children: React.ReactNode;
 }
 
@@ -24,10 +30,12 @@ type ResizeHandle =
   | "n" | "s" | "e" | "w"
   | "ne" | "nw" | "se" | "sw";
 
-export function AppWindow({ appId, title, x, y, width, height, children }: AppWindowProps) {
+export function AppWindow({ appId, appType, title, x, y, width, height, showMinimize, children }: AppWindowProps) {
   const updateAppPosition = useWorkspaceStore((s) => s.updateAppPosition);
   const updateAppSize = useWorkspaceStore((s) => s.updateAppSize);
   const removeApp = useWorkspaceStore((s) => s.removeApp);
+  const setMinimized = useWorkspaceStore((s) => s.setMinimized);
+  const AppIcon = getAppIcon(appType);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0, appX: 0, appY: 0 });
   const [isResizing, setIsResizing] = useState(false);
@@ -131,10 +139,10 @@ export function AppWindow({ appId, title, x, y, width, height, children }: AppWi
 
   return (
     <motion.div
-      layout
-      initial={{ opacity: 0, scale: 0.96 }}
+      initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      exit={{ opacity: 0, scale: 0.92 }}
+      transition={windowTransition}
       className="absolute overflow-hidden rounded-xl border border-border bg-card shadow-xl"
       style={{
         left: x,
@@ -145,29 +153,49 @@ export function AppWindow({ appId, title, x, y, width, height, children }: AppWi
         minHeight: MIN_WINDOW_HEIGHT,
       }}
     >
-      {/* Title bar - drag area, glassy */}
+      {/* Title bar - logo, drag area, minimize, close */}
       <div
-        className={`flex cursor-grab items-center justify-between border-b border-border/80 bg-muted/60 px-3 py-2 backdrop-blur-sm ${isDragging ? "cursor-grabbing" : ""}`}
+        className={`flex cursor-grab items-center gap-2 border-b border-border/80 bg-muted/60 px-3 py-2 backdrop-blur-sm ${isDragging ? "cursor-grabbing" : ""}`}
         onMouseDown={handleDragStart}
       >
-        <span className="text-sm font-medium text-foreground">
+        <AppIcon className="size-4 shrink-0 text-primary" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
           {title}
         </span>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-7 shrink-0"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            removeApp(appId);
-          }}
-          onMouseDown={(e) => e.stopPropagation()}
-          aria-label="Close"
-        >
-          <X className="size-4" />
-        </Button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          {showMinimize && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setMinimized(appId, true);
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+              aria-label="Minimize"
+            >
+              <Minus className="size-4" />
+            </Button>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              removeApp(appId);
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            aria-label="Close"
+          >
+            <X className="size-4" />
+          </Button>
+        </div>
       </div>
 
       {/* App content */}

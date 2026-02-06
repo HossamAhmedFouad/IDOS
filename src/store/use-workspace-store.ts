@@ -17,6 +17,7 @@ interface WorkspaceState {
   history: WorkspaceConfig[];
   activeModes: SystemMode[];
   view: AppView;
+  minimizedAppIds: string[];
 
   setView: (view: AppView) => void;
   setWorkspace: (config: WorkspaceConfig) => void;
@@ -24,6 +25,7 @@ interface WorkspaceState {
   updateAppSize: (appId: string, width: number, height: number, x?: number, y?: number) => void;
   addApp: (type: AppId, config?: AppInstance["config"]) => void;
   removeApp: (appId: string) => void;
+  setMinimized: (appId: string, minimized: boolean) => void;
   setLayoutStrategy: (strategy: LayoutStrategy) => void;
   setActiveModes: (modes: SystemMode[]) => void;
   pushHistory: (config: WorkspaceConfig) => void;
@@ -47,8 +49,16 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       history: [],
       activeModes: ["dark"],
       view: "home",
+      minimizedAppIds: [],
 
       setView: (view) => set({ view }),
+
+      setMinimized: (appId, minimized) =>
+        set((state) => ({
+          minimizedAppIds: minimized
+            ? [...state.minimizedAppIds, appId]
+            : state.minimizedAppIds.filter((id) => id !== appId),
+        })),
 
       setWorkspace: (config) =>
         set((state) => ({
@@ -107,6 +117,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             ...state.workspace,
             apps: state.workspace.apps.filter((app) => app.id !== appId),
           },
+          minimizedAppIds: state.minimizedAppIds.filter((id) => id !== appId),
         })),
 
       setLayoutStrategy: (strategy) =>
@@ -138,6 +149,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         workspace: state.workspace,
         history: state.history,
         activeModes: state.activeModes,
+        minimizedAppIds: state.minimizedAppIds,
       }),
     }
   )
