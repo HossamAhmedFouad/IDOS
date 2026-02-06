@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IDOS - Intent-Driven OS
+
+An Intent-Driven Operating System built as a web application. Describe what you want to do in natural language, and IDOS creates a workspace with the right apps and layout.
+
+## Tech Stack
+
+- **Next.js 16** - React framework with App Router
+- **React 19** - UI library
+- **Zustand** - State management with localStorage persistence
+- **Tailwind CSS 4** - Styling
+- **TypeScript** - Type safety
+- **IndexedDB** - Browser-based file storage
+- **Gemini API** - Intent parsing
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install dependencies
+
+```bash
+npm install
+```
+
+### 2. Configure environment
+
+Create a `.env.local` file in the project root:
+
+```
+GEMINI_API_KEY=your_gemini_api_key_here
+```
+
+Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey). Alternatively, use `GOOGLE_GENERATIVE_AI_API_KEY` if you prefer.
+
+### 3. Run the development server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 4. Try it out
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Type an intent in the search bar, for example:
+
+- "Take notes and set a 25 min timer"
+- "I need a todo list and dark mode"
+- "Write an email draft"
+
+IDOS will create a workspace with the appropriate apps.
+
+## Architecture
+
+- **Workspace** - Layout configuration (apps, positions, modes, layout strategy)
+- **App Registry** - Maps app IDs to components (Notes, Timer, Todo, Email, AI Chat, etc.)
+- **File System** - IndexedDB-backed virtual file system (Unix-style paths)
+- **Layout Engine** - Computes pixel positions (floating layout in Phase 1)
+- **Intent API** - POST `/api/parse-intent` with `{ intent: string }` to get workspace config
+
+## Project Structure
+
+```
+src/
+├── app/           # Next.js App Router
+├── apps/          # App registry + individual apps (notes, timer, todo, etc.)
+├── components/    # Shared UI (AppWindow with drag/resize)
+├── features/      # Workspace view, intent input, layout engine
+├── lib/           # Types, constants, file system API
+└── store/         # Zustand stores (workspace)
+```
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Documentation/Intent_Driven_OS_Frontend_Architecture.pdf](Documentation/Intent_Driven_OS_Frontend_Architecture.pdf)
