@@ -16,7 +16,11 @@ export function WorkspaceView() {
   const setActiveModes = useWorkspaceStore((s) => s.setActiveModes);
   const setWorkspace = useWorkspaceStore((s) => s.setWorkspace);
   const setView = useWorkspaceStore((s) => s.setView);
-  const [viewport, setViewport] = useState({ width: 0, height: 0 });
+  const [viewport, setViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? { width: window.innerWidth, height: window.innerHeight }
+      : { width: 800, height: 600 }
+  );
 
   useEffect(() => {
     const updateViewport = () => {

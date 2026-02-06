@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { LayoutGrid } from "lucide-react";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { IntentInput } from "@/features/intent/intent-input";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { Button } from "@/components/ui/button";
 
 export function HomeView() {
   const setView = useWorkspaceStore((s) => s.setView);
@@ -17,6 +19,20 @@ export function HomeView() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      {/* Top bar: Workspace button */}
+      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setView("workspace")}
+          className="gap-2 text-muted-foreground hover:text-foreground"
+        >
+          <LayoutGrid className="size-4" />
+          Workspace
+        </Button>
+      </div>
+
       {/* Chat / intent area centered, above taskbar */}
       <div
         className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex items-center justify-center"
