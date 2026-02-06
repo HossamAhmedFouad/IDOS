@@ -10,7 +10,7 @@ export const APP_DEFAULT_SIZES: Record<AppId, { width: number; height: number }>
     notes: { width: 400, height: 350 },
     timer: { width: 320, height: 280 },
     todo: { width: 380, height: 400 },
-    "code-editor": { width: 600, height: 450 },
+    "code-editor": { width: 800, height: 500 },
     quiz: { width: 450, height: 380 },
     email: { width: 450, height: 420 },
     chat: { width: 400, height: 500 },

@@ -32,6 +32,7 @@ export interface AppBounds {
  */
 export interface AppConfig {
   filePath?: string;
+  directoryPath?: string;
   [key: string]: unknown;
 }
 
