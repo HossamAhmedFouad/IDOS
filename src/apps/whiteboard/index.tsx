@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import type { AppProps } from "@/lib/types";
 
-const DEFAULT_PATH = "/whiteboard/diagram.json";
+const WHITEBOARD_DIR = "/whiteboard";
 
 const ExcalidrawBoard = dynamic(
   () => import("./excalidraw-board").then((m) => m.ExcalidrawBoard),
@@ -17,8 +17,9 @@ const ExcalidrawBoard = dynamic(
   }
 );
 
-export function WhiteboardApp({ config }: AppProps) {
-  const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
+export function WhiteboardApp({ id, config }: AppProps) {
+  const filePath =
+    (config?.filePath as string | undefined) ?? `${WHITEBOARD_DIR}/${id}.json`;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden">

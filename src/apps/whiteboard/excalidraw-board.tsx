@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 import {
   Excalidraw,
   loadFromBlob,
@@ -26,6 +26,8 @@ export interface ExcalidrawBoardProps {
 export function ExcalidrawBoard({ filePath, className }: ExcalidrawBoardProps) {
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
   const loadScene = useCallback(
     async (api: ExcalidrawImperativeAPI) => {
@@ -76,26 +78,55 @@ export function ExcalidrawBoard({ filePath, className }: ExcalidrawBoardProps) {
     };
   }, []);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      setSize({ width: Math.round(width), height: Math.round(height) });
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const hasSize = size.width > 0 && size.height > 0;
+
   return (
     <div
+      ref={containerRef}
       className={className}
       style={{
         height: "100%",
         width: "100%",
         overflow: "hidden",
-        contain: "layout",
         minHeight: 0,
+        position: "relative",
       }}
     >
-      <Excalidraw
-        excalidrawAPI={(api) => {
-          excalidrawAPIRef.current = api;
-          loadScene(api);
-        }}
-        onChange={(elements, appState, files) => {
-          scheduleSave(elements, appState, files);
-        }}
-      />
+      {hasSize && (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            top: 0,
+            width: size.width,
+            height: size.height,
+            overflow: "hidden",
+          }}
+        >
+          <Excalidraw
+            excalidrawAPI={(api) => {
+              excalidrawAPIRef.current = api;
+              loadScene(api);
+            }}
+            onChange={(elements, appState, files) => {
+              scheduleSave(elements, appState, files);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }
