@@ -8,10 +8,11 @@ import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { IntentInput } from "@/features/intent/intent-input";
 import { IntentBlob } from "@/components/intent-blob";
 import { ParticleBackground } from "@/components/particle-background";
+import { GeometricField } from "@/components/geometric-field";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
 
-const INTENSITY_THRESHOLD = 22;
+const INTENSITY_THRESHOLD = 12;
 
 const LOADING_MESSAGES = [
   "Working on something great...",
@@ -87,6 +88,8 @@ export function HomeView() {
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
+      {/* Geometric field (mouse-reactive grid) */}
+      <GeometricField />
       {/* Background particles (when personalization allows) */}
       {backgroundType === "particles" && (
         <ParticleBackground
@@ -168,15 +171,25 @@ export function HomeView() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.2 }}
-                className="w-full"
+                className="flex w-full flex-col items-center gap-6"
               >
-                <IntentInput
-                  submitIcon={Play}
-                  submitLabel="Start"
-                  onIntentChange={(v) => setIntentLength(v.length)}
-                  onSubmitting={() => setLoading(true)}
-                  onSuccess={handleSuccess}
-                />
+                <motion.p
+                  className="text-5xl font-bold text-foreground md:text-6xl [font-family:var(--font-pixel)]"
+                  animate={{ opacity: intentLength > 0 ? 0 : 1 }}
+                  transition={{ duration: 0.3 }}
+                  aria-hidden={intentLength > 0}
+                >
+                  IDOS
+                </motion.p>
+                <div className="w-full">
+                  <IntentInput
+                    submitIcon={Play}
+                    submitLabel="Start"
+                    onIntentChange={(v) => setIntentLength(v.length)}
+                    onSubmitting={() => setLoading(true)}
+                    onSuccess={handleSuccess}
+                  />
+                </div>
               </motion.div>
             )}
           </AnimatePresence>

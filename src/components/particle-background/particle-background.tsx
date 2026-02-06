@@ -6,9 +6,9 @@ import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { THEME_PRIMARY_RGB } from "@/lib/constants/theme-colors";
 import type { ThemeId } from "@/store/use-personalization-store";
 
-const MAX_PARTICLES = 120;
+const MAX_PARTICLES = 200;
 const BASE_PARTICLES = 15;
-const INTENT_FACTOR = 5; // particles per character
+const INTENT_FACTOR = 8; // particles per character
 const MIN_ORBIT_PARTICLES = 80;
 const PARTICLE_RADIUS = 1.5;
 const DRIFT_SPEED = 0.3;

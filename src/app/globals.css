@@ -147,6 +147,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* Text selection follows personalization (theme) primary color */
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 40%, transparent);
+    color: var(--primary-foreground);
+  }
 }
 
 /* Focus mode: reduce visual clutter, dim non-essential UI */

@@ -17,10 +17,10 @@ export interface IntentBlobProps {
 export const IntentBlob = forwardRef<HTMLDivElement, IntentBlobProps>(
   function IntentBlob({ intensity, loading = false }, ref) {
     const themeId = usePersonalizationStore((s) => s.themeId);
-    const scale = loading ? 0.82 : 0.9 + intensity * 0.3;
-    const glowAlpha = 0.2 + intensity * 0.6;
-    const innerHigh = 0.4 + intensity * 0.5;
-    const innerLow = 0.1 + intensity * 0.3;
+    const scale = loading ? 0.82 : 0.9 + intensity * 0.35;
+    const glowAlpha = 0.25 + intensity * 0.7;
+    const innerHigh = 0.45 + intensity * 0.5;
+    const innerLow = 0.1 + intensity * 0.35;
     const primaryGlow = getPrimaryOklchWithAlpha(themeId, glowAlpha);
     const primaryInnerHigh = getPrimaryOklchWithAlpha(themeId, innerHigh);
     const primaryInnerLow = getPrimaryOklchWithAlpha(themeId, innerLow);
@@ -32,11 +32,11 @@ export const IntentBlob = forwardRef<HTMLDivElement, IntentBlobProps>(
         style={{
           width: 160,
           height: 160,
-          filter: `blur(${20 + intensity * 30}px) drop-shadow(0 0 ${20 + intensity * 40}px ${primaryGlow})`,
+          filter: `blur(${24 + intensity * 40}px) drop-shadow(0 0 ${28 + intensity * 55}px ${primaryGlow})`,
           transition: `filter ${COLOR_TRANSITION}`,
         }}
         animate={{
-          opacity: 0.3 + intensity * 0.5,
+          opacity: 0.35 + intensity * 0.55,
           scale,
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
