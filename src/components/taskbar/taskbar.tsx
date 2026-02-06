@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 const TASKBAR_HEIGHT = 56;
-const MAX_DESK_APPS = 4;
+const MAX_DESK_APPS = 8;
 const DEFAULT_PINNED: AppId[] = ["notes", "timer", "todo", "ai-chat"];
 
 export function Taskbar() {
@@ -29,23 +29,24 @@ export function Taskbar() {
     workspace.apps.filter((a) => !minimizedAppIds.includes(a.id)).map((a) => a.type)
   );
 
-  // Up to 4 apps: open/minimized apps in workspace order, or default pinned when none open
+  // Always show default pinned, then append open apps not in default (new apps at bottom)
   const deskApps = useMemo(() => {
     const seen = new Set<AppId>();
     const result: { id: AppId; name: string }[] = [];
+
+    for (const id of DEFAULT_PINNED) {
+      seen.add(id);
+      const catalog = APP_CATALOG.find((a) => a.id === id);
+      if (catalog) result.push({ id: catalog.id, name: catalog.name });
+    }
+
     for (const app of workspace.apps) {
       if (seen.has(app.type) || result.length >= MAX_DESK_APPS) continue;
       seen.add(app.type);
       const catalog = APP_CATALOG.find((a) => a.id === app.type);
       if (catalog) result.push({ id: catalog.id, name: catalog.name });
     }
-    // When no apps open, show 4 default pinned quick-access
-    if (result.length === 0) {
-      for (const id of DEFAULT_PINNED) {
-        const catalog = APP_CATALOG.find((a) => a.id === id);
-        if (catalog) result.push({ id: catalog.id, name: catalog.name });
-      }
-    }
+
     return result;
   }, [workspace.apps]);
 

@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
@@ -11,14 +12,20 @@ export interface IntentInputProps {
   onSubmitting?: () => void;
   /** Called when submit succeeds or when starting with no intent (go to workspace). */
   onSuccess?: () => void;
-  /** Label for the submit button. */
+  /** Label for the submit button (used when submitIcon is not set). */
   submitLabel?: string;
+  /** Icon for the submit button (when set, renders icon instead of label). */
+  submitIcon?: LucideIcon;
+  /** Called when the intent input value changes. */
+  onIntentChange?: (value: string) => void;
 }
 
 export function IntentInput({
   onSubmitting,
   onSuccess,
   submitLabel = "Go",
+  submitIcon: SubmitIcon,
+  onIntentChange,
 }: IntentInputProps = {}) {
   const [intent, setIntent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -93,7 +100,11 @@ export function IntentInput({
         <Input
           type="text"
           value={intent}
-          onChange={(e) => setIntent(e.target.value)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setIntent(v);
+            onIntentChange?.(v);
+          }}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           placeholder="Describe what you want to do... (e.g. 'Take notes and set a 25 min timer')"
@@ -103,9 +114,17 @@ export function IntentInput({
         <Button
           type="submit"
           disabled={loading}
-          className="rounded-lg px-6 shrink-0"
+          size={SubmitIcon ? "icon" : undefined}
+          className={SubmitIcon ? "rounded-lg shrink-0" : "rounded-lg px-6 shrink-0"}
+          aria-label={SubmitIcon ? (submitLabel ?? "Submit") : undefined}
         >
-          {loading ? "..." : submitLabel}
+          {loading ? (
+            "..."
+          ) : SubmitIcon ? (
+            <SubmitIcon className="size-5" />
+          ) : (
+            submitLabel
+          )}
         </Button>
       </motion.div>
       {error && (
