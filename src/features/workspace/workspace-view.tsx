@@ -68,14 +68,10 @@ export function WorkspaceView() {
     return () => window.removeEventListener("resize", updateViewport);
   }, []);
 
-  const isDark = activeModes.includes("dark");
   const isFocus = activeModes.includes("focus");
   const isDnd = activeModes.includes("dnd");
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", isDark);
-  }, [isDark]);
 
-  const toggleMode = (mode: "dark" | "focus" | "dnd") => {
+  const toggleMode = (mode: "focus" | "dnd") => {
     const active = activeModes.includes(mode);
     setActiveModes(
       active ? activeModes.filter((m) => m !== mode) : [...activeModes, mode]
@@ -335,25 +331,13 @@ export function WorkspaceView() {
           >
             DND
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => toggleMode("dark")}
-            className={cn(
-              "shrink-0 text-muted-foreground hover:text-foreground",
-              isDark && "bg-primary/10 text-primary"
-            )}
-          >
-            {isDark ? "Light" : "Dark"}
-          </Button>
         </div>
       </div>
 
       {/* DND status indicator overlay */}
       {isDnd && (
         <div
-          className="pointer-events-none absolute bottom-16 right-4 z-50 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400"
+          className="pointer-events-none absolute bottom-16 right-4 z-50 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400"
           aria-hidden
         >
           Do Not Disturb

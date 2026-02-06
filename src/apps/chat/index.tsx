@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 const DEFAULT_PATH = "/chat/messages.json";
 
@@ -80,7 +82,7 @@ export function ChatApp({ config }: AppProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -88,7 +90,7 @@ export function ChatApp({ config }: AppProps) {
   return (
     <div className="flex h-full flex-col">
       {saving && (
-        <div className="shrink-0 px-3 py-1 text-xs text-zinc-500 dark:text-zinc-400">
+        <div className="shrink-0 px-3 py-1 text-xs text-muted-foreground">
           Saving...
         </div>
       )}
@@ -104,8 +106,8 @@ export function ChatApp({ config }: AppProps) {
             <div
               className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
                 m.sender === "user"
-                  ? "bg-zinc-800 text-white dark:bg-zinc-600"
-                  : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-foreground"
               }`}
             >
               {m.text}
@@ -113,22 +115,17 @@ export function ChatApp({ config }: AppProps) {
           </div>
         ))}
       </div>
-      <div className="flex gap-2 border-t border-zinc-200 p-3 dark:border-zinc-700">
-        <input
-          type="text"
+      <div className="flex gap-2 border-t border-border p-3">
+        <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Type a message..."
-          className="flex-1 rounded border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+          className="flex-1"
         />
-        <button
-          type="button"
-          onClick={sendMessage}
-          className="rounded bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500"
-        >
+        <Button type="button" onClick={sendMessage}>
           Send
-        </button>
+        </Button>
       </div>
     </div>
   );

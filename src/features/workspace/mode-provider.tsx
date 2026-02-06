@@ -11,13 +11,6 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const html = document.documentElement;
-    if (activeModes.includes("dark")) {
-      html.classList.add("dark");
-      html.setAttribute("data-theme", "dark");
-    } else {
-      html.classList.remove("dark");
-      html.removeAttribute("data-theme");
-    }
     if (activeModes.includes("focus")) {
       html.setAttribute("data-focus", "true");
     } else {

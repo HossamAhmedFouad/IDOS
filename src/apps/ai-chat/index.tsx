@@ -2,6 +2,8 @@
 
 import { useState, useCallback } from "react";
 import type { AppProps } from "@/lib/types";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 interface Message {
   id: string;
@@ -37,7 +39,7 @@ export function AIChatApp(props: AppProps) {
     <div className="flex h-full flex-col p-4">
       <div className="mb-4 flex-1 space-y-3 overflow-auto">
         {messages.length === 0 && (
-          <div className="rounded-lg bg-zinc-100 p-4 text-sm text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+          <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
             Start a conversation. AI responses will be available when connected to a backend.
           </div>
         )}
@@ -46,8 +48,8 @@ export function AIChatApp(props: AppProps) {
             key={m.id}
             className={`rounded-lg px-3 py-2 ${
               m.role === "user"
-                ? "ml-8 bg-zinc-200 text-zinc-900 dark:bg-zinc-700 dark:text-zinc-100"
-                : "mr-8 bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                ? "ml-8 bg-primary text-primary-foreground"
+                : "mr-8 bg-muted text-foreground"
             }`}
           >
             <span className="text-xs font-medium opacity-70">{m.role}</span>
@@ -56,23 +58,21 @@ export function AIChatApp(props: AppProps) {
         ))}
       </div>
       <div className="flex gap-2">
-        <input
-          type="text"
+        <Input
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
           placeholder="Type a message..."
           disabled={loading}
-          className="flex-1 rounded border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-500 disabled:opacity-50"
+          className="flex-1"
         />
-        <button
+        <Button
           type="button"
           onClick={sendMessage}
           disabled={loading || !input.trim()}
-          className="rounded bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-600 dark:hover:bg-zinc-500"
         >
           Send
-        </button>
+        </Button>
       </div>
     </div>
   );

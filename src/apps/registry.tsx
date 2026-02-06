@@ -35,7 +35,7 @@ function PlaceholderApp({ appType }: AppProps) {
   const name = getAppName(appType);
   return (
     <div className="flex h-full items-center justify-center p-4">
-      <span className="text-zinc-500 dark:text-zinc-400">{name}</span>
+      <span className="text-muted-foreground">{name}</span>
     </div>
   );
 }

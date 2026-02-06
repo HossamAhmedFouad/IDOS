@@ -83,7 +83,7 @@ export function FileBrowserApp({ config }: AppProps) {
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
-      <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800">
+      <div className="shrink-0 border-b border-border bg-muted px-3 py-2">
         <div className="flex flex-wrap items-center gap-1 text-sm">
           {breadcrumbs.map((part, i) => (
             <button
@@ -92,7 +92,7 @@ export function FileBrowserApp({ config }: AppProps) {
               onClick={() =>
                 setCurrentPath(i === 0 ? "/" : "/" + breadcrumbs.slice(1, i + 1).join("/"))
               }
-              className="rounded px-1.5 py-0.5 text-zinc-600 hover:bg-zinc-200 dark:text-zinc-300 dark:hover:bg-zinc-700"
+              className="rounded px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground"
             >
               {part}
             </button>
@@ -100,32 +100,32 @@ export function FileBrowserApp({ config }: AppProps) {
         </div>
       </div>
       {error && (
-        <div className="shrink-0 bg-red-50 px-3 py-1.5 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <div className="shrink-0 bg-destructive/10 px-3 py-1.5 text-sm text-destructive">
           {error}
         </div>
       )}
       <div className="flex flex-1 min-h-0">
-        <div className="flex w-1/2 flex-col overflow-auto border-r border-zinc-200 dark:border-zinc-700">
+        <div className="flex w-1/2 flex-col overflow-auto border-r border-border">
           {loading ? (
-            <div className="p-4 text-sm text-zinc-500">Loading...</div>
+            <div className="p-4 text-sm text-muted-foreground">Loading...</div>
           ) : (
-            <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            <ul className="divide-y divide-border">
               {entries.map((e) => (
                 <li
                   key={e.path}
-                  className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-800"
+                  className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted"
                 >
                   <button
                     type="button"
                     onClick={() =>
                       e.isDir ? setCurrentPath(e.path + (e.path === "/" ? "" : "/")) : loadPreview(e.path)
                     }
-                    className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm"
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left text-sm text-foreground"
                   >
                     {e.isDir ? (
                       <Folder className="size-4 shrink-0 text-amber-500" />
                     ) : (
-                      <File className="size-4 shrink-0 text-zinc-500" />
+                      <File className="size-4 shrink-0 text-muted-foreground" />
                     )}
                     <span className="truncate">{e.name}</span>
                   </button>
@@ -133,7 +133,7 @@ export function FileBrowserApp({ config }: AppProps) {
                     <button
                       type="button"
                       onClick={() => handleDelete(e.path, e.isDir)}
-                      className="shrink-0 rounded p-1 text-zinc-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                      className="shrink-0 rounded p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       aria-label="Delete"
                     >
                       <Trash2 className="size-3.5" />
@@ -147,15 +147,15 @@ export function FileBrowserApp({ config }: AppProps) {
         <div className="flex w-1/2 flex-col overflow-hidden">
           {previewPath ? (
             <>
-              <div className="shrink-0 border-b border-zinc-200 px-3 py-1.5 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+              <div className="shrink-0 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
                 {previewPath}
               </div>
-              <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-3 font-mono text-xs text-zinc-800 dark:text-zinc-200">
+              <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-3 font-mono text-xs text-foreground">
                 {previewContent}
               </pre>
             </>
           ) : (
-            <div className="flex flex-1 items-center justify-center text-sm text-zinc-500 dark:text-zinc-400">
+            <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
               Select a file to preview
             </div>
           )}

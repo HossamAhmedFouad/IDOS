@@ -100,7 +100,7 @@ export function CalendarApp({ config }: AppProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -119,59 +119,59 @@ export function CalendarApp({ config }: AppProps) {
   return (
     <div className="flex h-full flex-col p-4">
       {saving && (
-        <div className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">Saving...</div>
+        <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
       <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
           onClick={prevDay}
-          className="rounded px-2 py-1 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="rounded px-2 py-1 text-sm hover:bg-muted"
         >
           ←
         </button>
-        <h3 className="text-sm font-medium">{currentStr}</h3>
+        <h3 className="text-sm font-medium text-foreground">{currentStr}</h3>
         <button
           type="button"
           onClick={nextDay}
-          className="rounded px-2 py-1 text-sm hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          className="rounded px-2 py-1 text-sm hover:bg-muted"
         >
           →
         </button>
       </div>
       {showForm ? (
-        <div className="mb-4 flex flex-col gap-2 rounded border border-zinc-200 bg-zinc-50 p-3 dark:border-zinc-700 dark:bg-zinc-800">
+        <div className="mb-4 flex flex-col gap-2 rounded border border-border bg-muted p-3">
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Event title"
-            className="rounded border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <input
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
             placeholder="Time (optional)"
-            className="rounded border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={addEvent}
-              className="rounded bg-zinc-800 px-4 py-2 text-sm text-white hover:bg-zinc-700 dark:bg-zinc-600"
+              className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
             >
               Add
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
-              className="rounded border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+              className="rounded border border-border px-4 py-2 text-sm hover:bg-muted"
             >
               Cancel
             </button>
@@ -181,7 +181,7 @@ export function CalendarApp({ config }: AppProps) {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="mb-4 rounded border border-dashed border-zinc-300 px-4 py-2 text-sm text-zinc-600 hover:border-zinc-400 dark:border-zinc-600 dark:text-zinc-400 dark:hover:border-zinc-500"
+          className="mb-4 rounded border border-dashed border-border px-4 py-2 text-sm text-muted-foreground hover:border-foreground/30 hover:text-foreground"
         >
           + Add event
         </button>
@@ -190,18 +190,18 @@ export function CalendarApp({ config }: AppProps) {
         {dayEvents.map((evt) => (
           <li
             key={evt.id}
-            className="flex items-center justify-between gap-2 rounded border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex items-center justify-between gap-2 rounded border border-border bg-card px-3 py-2"
           >
             <div>
-              <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{evt.title}</p>
+              <p className="text-sm font-medium text-foreground">{evt.title}</p>
               {evt.time && (
-                <p className="text-xs text-zinc-500 dark:text-zinc-400">{evt.time}</p>
+                <p className="text-xs text-muted-foreground">{evt.time}</p>
               )}
             </div>
             <button
               type="button"
               onClick={() => deleteEvent(evt.id)}
-              className="text-zinc-400 hover:text-red-600 dark:hover:text-red-400"
+              className="text-muted-foreground hover:text-destructive"
             >
               ×
             </button>

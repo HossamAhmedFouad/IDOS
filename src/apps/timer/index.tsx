@@ -37,7 +37,7 @@ export function TimerApp(props: AppProps) {
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-4 p-6">
-      <div className="text-4xl font-mono font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+      <div className="text-4xl font-mono font-medium tabular-nums text-foreground">
         {formatTime(seconds)}
       </div>
       <div className="flex gap-2">
@@ -45,7 +45,7 @@ export function TimerApp(props: AppProps) {
           type="button"
           onClick={handleStart}
           disabled={isRunning}
-          className="rounded bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-700 dark:hover:bg-zinc-600"
+          className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
         >
           Start
         </button>
@@ -53,14 +53,14 @@ export function TimerApp(props: AppProps) {
           type="button"
           onClick={handlePause}
           disabled={!isRunning}
-          className="rounded bg-zinc-200 px-4 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-300 disabled:opacity-50 dark:bg-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-500"
+          className="rounded bg-secondary px-4 py-2 text-sm font-medium text-secondary-foreground hover:bg-secondary/80 disabled:opacity-50"
         >
           Pause
         </button>
         <button
           type="button"
           onClick={handleReset}
-          className="rounded border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          className="rounded border border-border px-4 py-2 text-sm font-medium hover:bg-muted"
         >
           Reset
         </button>
@@ -77,8 +77,8 @@ export function TimerApp(props: AppProps) {
             }}
             className={`rounded px-3 py-1 text-sm ${
               preset === m
-                ? "bg-zinc-800 text-white dark:bg-zinc-600"
-                : "border border-zinc-300 text-zinc-600 hover:bg-zinc-100 dark:border-zinc-600 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                ? "bg-primary text-primary-foreground"
+                : "border border-border text-muted-foreground hover:bg-muted"
             }`}
           >
             {m} min

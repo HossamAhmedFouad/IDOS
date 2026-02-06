@@ -68,7 +68,7 @@ export function EmailApp({ config }: AppProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -76,10 +76,10 @@ export function EmailApp({ config }: AppProps) {
   return (
     <div className="flex h-full flex-col p-4">
       {saving && (
-        <div className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">Saving draft...</div>
+        <div className="mb-2 text-xs text-muted-foreground">Saving draft...</div>
       )}
       <div className="mb-4">
-        <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
           Subject
         </label>
         <input
@@ -88,11 +88,11 @@ export function EmailApp({ config }: AppProps) {
           onChange={(e) => setSubject(e.target.value)}
           onBlur={handleBlur}
           placeholder="Email subject"
-          className="w-full rounded border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-500"
+          className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
       <div className="flex-1">
-        <label className="mb-1 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label className="mb-1 block text-xs font-medium text-muted-foreground">
           Body
         </label>
         <textarea
@@ -100,7 +100,7 @@ export function EmailApp({ config }: AppProps) {
           onChange={(e) => setBody(e.target.value)}
           onBlur={handleBlur}
           placeholder="Compose your email..."
-          className="h-full w-full resize-none rounded border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:focus:border-zinc-500"
+          className="h-full w-full resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
     </div>

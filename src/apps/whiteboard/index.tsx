@@ -148,19 +148,19 @@ export function WhiteboardApp({ config }: AppProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2 dark:border-zinc-700">
-        {saving && <span className="text-xs text-zinc-500">Saving...</span>}
+      <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+        {saving && <span className="text-xs text-muted-foreground">Saving...</span>}
         <button
           type="button"
           onClick={handleClear}
-          className="rounded border border-zinc-200 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-700 dark:hover:bg-zinc-800"
+          className="rounded border border-border px-3 py-1.5 text-sm hover:bg-muted"
         >
           Clear
         </button>
@@ -168,7 +168,7 @@ export function WhiteboardApp({ config }: AppProps) {
       <div className="relative flex-1 min-h-0">
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 h-full w-full cursor-crosshair bg-white dark:bg-zinc-900"
+          className="absolute inset-0 h-full w-full cursor-crosshair bg-background"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}

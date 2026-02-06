@@ -97,7 +97,7 @@ export function QuizApp({ config }: AppProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -105,15 +105,15 @@ export function QuizApp({ config }: AppProps) {
   return (
     <div className="flex h-full flex-col p-4">
       {saving && (
-        <div className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">Saving...</div>
+        <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
       {cards.length === 0 && !showForm ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4">
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">No flashcards yet</p>
+          <p className="text-sm text-muted-foreground">No flashcards yet</p>
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="rounded bg-zinc-800 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-600 dark:hover:bg-zinc-500"
+            className="rounded bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90"
           >
             Add first card
           </button>
@@ -125,20 +125,20 @@ export function QuizApp({ config }: AppProps) {
             value={front}
             onChange={(e) => setFront(e.target.value)}
             placeholder="Front (question)"
-            className="rounded border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <input
             type="text"
             value={back}
             onChange={(e) => setBack(e.target.value)}
             placeholder="Back (answer)"
-            className="rounded border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           <div className="flex gap-2">
             <button
               type="button"
               onClick={addCard}
-              className="rounded bg-zinc-800 px-4 py-2 text-sm text-white hover:bg-zinc-700 dark:bg-zinc-600"
+              className="rounded bg-primary px-4 py-2 text-sm text-primary-foreground hover:bg-primary/90"
             >
               Add
             </button>
@@ -149,7 +149,7 @@ export function QuizApp({ config }: AppProps) {
                 setFront("");
                 setBack("");
               }}
-              className="rounded border border-zinc-200 px-4 py-2 text-sm dark:border-zinc-700"
+              className="rounded border border-border px-4 py-2 text-sm hover:bg-muted"
             >
               Cancel
             </button>
@@ -158,13 +158,13 @@ export function QuizApp({ config }: AppProps) {
       ) : (
         <>
           <div className="mb-4 flex items-center justify-between">
-            <span className="text-xs text-zinc-500">
+            <span className="text-xs text-muted-foreground">
               {currentIndex + 1} / {cards.length}
             </span>
             <button
               type="button"
               onClick={() => setShowForm(true)}
-              className="text-xs text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+              className="text-xs text-muted-foreground hover:text-foreground"
             >
               + Add card
             </button>
@@ -172,12 +172,12 @@ export function QuizApp({ config }: AppProps) {
           <button
             type="button"
             onClick={() => setFlipped(!flipped)}
-            className="flex flex-1 flex-col items-center justify-center rounded-lg border-2 border-dashed border-zinc-200 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-800"
+            className="flex flex-1 flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted p-6 text-center"
           >
-            <p className="text-lg font-medium text-zinc-900 dark:text-zinc-100">
+            <p className="text-lg font-medium text-foreground">
               {flipped ? currentCard.back : currentCard.front}
             </p>
-            <span className="mt-2 text-xs text-zinc-500">Click to flip</span>
+            <span className="mt-2 text-xs text-muted-foreground">Click to flip</span>
           </button>
           <div className="mt-4 flex justify-between gap-2">
             <button
@@ -187,14 +187,14 @@ export function QuizApp({ config }: AppProps) {
                 setFlipped(false);
               }}
               disabled={currentIndex === 0}
-              className="rounded border border-zinc-200 px-4 py-2 text-sm disabled:opacity-50 dark:border-zinc-700"
+              className="rounded border border-border px-4 py-2 text-sm disabled:opacity-50 hover:bg-muted"
             >
               Previous
             </button>
             <button
               type="button"
               onClick={() => deleteCard(currentCard.id)}
-              className="rounded px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              className="rounded px-4 py-2 text-sm text-destructive hover:bg-destructive/10"
             >
               Delete
             </button>
@@ -205,7 +205,7 @@ export function QuizApp({ config }: AppProps) {
                 setFlipped(false);
               }}
               disabled={currentIndex === cards.length - 1}
-              className="rounded border border-zinc-200 px-4 py-2 text-sm disabled:opacity-50 dark:border-zinc-700"
+              className="rounded border border-border px-4 py-2 text-sm disabled:opacity-50 hover:bg-muted"
             >
               Next
             </button>

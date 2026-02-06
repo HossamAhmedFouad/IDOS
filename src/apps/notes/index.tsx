@@ -54,7 +54,7 @@ export function NotesApp({ config }: AppProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-4">
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">Loading...</span>
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -62,15 +62,15 @@ export function NotesApp({ config }: AppProps) {
   return (
     <div className="flex h-full flex-col p-4">
       {error && (
-        <div className="mb-2 rounded bg-red-100 px-2 py-1 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-400">
+        <div className="mb-2 rounded bg-destructive/10 px-2 py-1 text-sm text-destructive">
           {error}
         </div>
       )}
       {saving && (
-        <div className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">Saving...</div>
+        <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
       <textarea
-        className="h-full w-full resize-none rounded border border-zinc-200 bg-white p-2 text-sm text-zinc-900 outline-none focus:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus:border-zinc-500"
+        className="h-full w-full resize-none rounded-md border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
         placeholder="Start typing..."
         value={content}
         onChange={handleChange}
