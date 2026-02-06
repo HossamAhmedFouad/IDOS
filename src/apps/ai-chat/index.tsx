@@ -23,24 +23,45 @@ export function AIChatApp(props: AppProps) {
     setMessages((prev) => [...prev, userMsg]);
     setInput("");
     setLoading(true);
-    // Placeholder: no backend for AI responses in Phase 1
-    setTimeout(() => {
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      const content = res.ok
+        ? (data.message ?? "")
+        : (data.error ?? `Error: ${res.status}`);
       const assistantMsg: Message = {
         id: `m-${Date.now()}`,
         role: "assistant",
-        content: "AI Chat is a placeholder. Connect to an AI backend in Phase 2.",
+        content: content || "No response.",
       };
       setMessages((prev) => [...prev, assistantMsg]);
+    } catch {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `m-${Date.now()}`,
+          role: "assistant",
+          content: "Could not reach the chat service. Check your connection and that GEMINI_API_KEY is set in .env.",
+        },
+      ]);
+    } finally {
       setLoading(false);
-    }, 500);
-  }, [input]);
+    }
+  }, [input, messages]);
 
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-4 flex-1 space-y-3 overflow-auto">
         {messages.length === 0 && (
           <div className="rounded-lg bg-muted p-4 text-sm text-muted-foreground">
-            Start a conversation. AI responses will be available when connected to a backend.
+            Chat with Gemini. Type a message below and press Enter or Send. Make sure GEMINI_API_KEY is set in .env.
           </div>
         )}
         {messages.map((m) => (
