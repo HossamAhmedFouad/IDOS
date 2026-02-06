@@ -13,7 +13,6 @@ export const APP_CATALOG: AppCatalogEntry[] = [
   { id: "code-editor", name: "Code Editor" },
   { id: "quiz", name: "Quiz" },
   { id: "email", name: "Email" },
-  { id: "chat", name: "Chat" },
   { id: "calendar", name: "Calendar" },
   { id: "file-browser", name: "File Browser" },
   { id: "whiteboard", name: "Whiteboard" },

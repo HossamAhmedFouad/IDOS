@@ -10,7 +10,6 @@ export type AppId =
   | "code-editor"
   | "quiz"
   | "email"
-  | "chat"
   | "calendar"
   | "file-browser"
   | "whiteboard"

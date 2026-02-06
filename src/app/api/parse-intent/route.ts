@@ -12,7 +12,7 @@ Respond ONLY with valid JSON in this exact shape (no markdown, no code blocks):
   "apps": [
     {
       "id": "unique-id-string",
-      "type": "notes|timer|todo|code-editor|quiz|email|chat|calendar|file-browser|whiteboard|ai-chat|explanation-panel",
+      "type": "notes|timer|todo|code-editor|quiz|email|calendar|file-browser|whiteboard|ai-chat|explanation-panel",
       "x": 0,
       "y": 0,
       "width": 400,
@@ -31,7 +31,6 @@ App type mapping:
 - code, programming, coding, edit code -> code-editor
 - quiz, study, flashcards, learning, memorize -> quiz
 - email, write email, draft, compose -> email
-- chat, messaging, quick chat -> chat
 - ai chat, assistant, help me with -> ai-chat
 - calendar, schedule, events, time blocking -> calendar
 - files, browse, file browser, organize files -> file-browser
@@ -67,7 +66,7 @@ Rules:
 
 const VALID_APP_TYPES: AppId[] = [
   "notes", "timer", "todo", "code-editor", "quiz", "email",
-  "chat", "calendar", "file-browser", "whiteboard", "ai-chat", "explanation-panel",
+  "calendar", "file-browser", "whiteboard", "ai-chat", "explanation-panel",
 ];
 const VALID_LAYOUTS: LayoutStrategy[] = ["floating", "grid", "split", "tiled"];
 const VALID_MODES: SystemMode[] = ["focus", "dark", "dnd"];

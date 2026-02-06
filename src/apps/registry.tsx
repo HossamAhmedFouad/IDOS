@@ -21,7 +21,6 @@ const APP_COMPONENTS: Record<AppId, React.LazyExoticComponent<React.ComponentTyp
   "code-editor": lazy(() => import("./code-editor").then((m) => ({ default: m.CodeEditorApp }))),
   quiz: lazy(() => import("./quiz").then((m) => ({ default: m.QuizApp }))),
   email: lazy(() => import("./email").then((m) => ({ default: m.EmailApp }))),
-  chat: lazy(() => import("./chat").then((m) => ({ default: m.ChatApp }))),
   calendar: lazy(() => import("./calendar").then((m) => ({ default: m.CalendarApp }))),
   "file-browser": lazy(() => import("./file-browser").then((m) => ({ default: m.FileBrowserApp }))),
   whiteboard: lazy(() => import("./whiteboard").then((m) => ({ default: m.WhiteboardApp }))),

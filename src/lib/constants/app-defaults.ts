@@ -13,7 +13,6 @@ export const APP_DEFAULT_SIZES: Record<AppId, { width: number; height: number }>
     "code-editor": { width: 800, height: 500 },
     quiz: { width: 450, height: 380 },
     email: { width: 450, height: 420 },
-    chat: { width: 400, height: 500 },
     calendar: { width: 450, height: 400 },
     "file-browser": { width: 400, height: 450 },
     whiteboard: { width: 550, height: 450 },
