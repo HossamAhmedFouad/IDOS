@@ -147,7 +147,7 @@ export function HomeView() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25 }}
-                    className="text-base font-bold text-white"
+                    className="text-base font-bold text-foreground"
                   >
                     {LOADING_MESSAGES[loadingMessageIndex]}
                   </motion.p>
