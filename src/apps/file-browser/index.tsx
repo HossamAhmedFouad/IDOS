@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import type { AppProps } from "@/lib/types";
-import { listDirectory, readFile, writeFile, deleteFile } from "@/lib/file-system";
-import { Folder, File, Trash2 } from "lucide-react";
+import {
+  listDirectory,
+  readFile,
+  writeFile,
+  deleteFile,
+  createDirectory,
+} from "@/lib/file-system";
+import { Folder, File, Trash2, FolderPlus, FilePlus, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
 const ROOT = "/";
+const AUTO_SAVE_DELAY_MS = 600;
 
 interface FileEntry {
   name: string;
@@ -21,6 +30,15 @@ export function FileBrowserApp({ config }: AppProps) {
   const [error, setError] = useState<string | null>(null);
   const [previewPath, setPreviewPath] = useState<string | null>(null);
   const [previewContent, setPreviewContent] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showNewDirInput, setShowNewDirInput] = useState(false);
+  const [newDirName, setNewDirName] = useState("");
+  const [showNewFileInput, setShowNewFileInput] = useState(false);
+  const [newFileName, setNewFileName] = useState("");
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [previewLoadOk, setPreviewLoadOk] = useState(false);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedContentRef = useRef("");
 
   const loadDir = useCallback(async (path: string) => {
     setLoading(true);
@@ -52,13 +70,104 @@ export function FileBrowserApp({ config }: AppProps) {
 
   const loadPreview = useCallback(async (path: string) => {
     setPreviewPath(path);
+    setSaveStatus("idle");
+    setPreviewLoadOk(false);
     try {
       const content = await readFile(path);
       setPreviewContent(content);
+      lastSavedContentRef.current = content;
+      setPreviewLoadOk(true);
     } catch {
       setPreviewContent("(Cannot preview this file)");
     }
   }, []);
+
+  const saveContent = useCallback(
+    async (path: string, content: string) => {
+      if (content === lastSavedContentRef.current) return;
+      setSaveStatus("saving");
+      try {
+        await writeFile(path, content);
+        lastSavedContentRef.current = content;
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+      } catch (err) {
+        setSaveStatus("error");
+        setError(err instanceof Error ? err.message : "Failed to save");
+      }
+    },
+    []
+  );
+
+  const scheduleAutoSave = useCallback(
+    (path: string, content: string) => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        saveContent(path, content);
+        saveTimeoutRef.current = null;
+      }, AUTO_SAVE_DELAY_MS);
+    },
+    [saveContent]
+  );
+
+  const handlePreviewChange = useCallback(
+    (value: string) => {
+      setPreviewContent(value);
+      if (previewPath && previewLoadOk) scheduleAutoSave(previewPath, value);
+    },
+    [previewPath, previewLoadOk, scheduleAutoSave]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    };
+  }, []);
+
+  const handleCreateDirectory = useCallback(async () => {
+    const name = newDirName.trim();
+    if (!name) {
+      setShowNewDirInput(false);
+      setNewDirName("");
+      return;
+    }
+    const pathPrefix = currentPath === "/" ? "/" : currentPath.endsWith("/") ? currentPath : currentPath + "/";
+    const newPath = pathPrefix + name;
+    setError(null);
+    try {
+      await createDirectory(newPath);
+      setNewDirName("");
+      setShowNewDirInput(false);
+      loadDir(currentPath);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create directory");
+    }
+  }, [currentPath, newDirName, loadDir]);
+
+  const handleCreateFile = useCallback(async () => {
+    const name = newFileName.trim();
+    if (!name) {
+      setShowNewFileInput(false);
+      setNewFileName("");
+      return;
+    }
+    const pathPrefix = currentPath === "/" ? "/" : currentPath.endsWith("/") ? currentPath : currentPath + "/";
+    const newPath = pathPrefix + name;
+    setError(null);
+    try {
+      await writeFile(newPath, "");
+      setNewFileName("");
+      setShowNewFileInput(false);
+      loadDir(currentPath);
+      setPreviewPath(newPath);
+      setPreviewContent("");
+      lastSavedContentRef.current = "";
+      setPreviewLoadOk(true);
+      setSaveStatus("idle");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create file");
+    }
+  }, [currentPath, newFileName, loadDir]);
 
   const handleDelete = useCallback(
     async (path: string, isDir: boolean) => {
@@ -80,6 +189,10 @@ export function FileBrowserApp({ config }: AppProps) {
 
   const pathParts = currentPath === "/" ? [] : currentPath.split("/").filter(Boolean);
   const breadcrumbs = ["/", ...pathParts];
+  const searchLower = searchQuery.trim().toLowerCase();
+  const filteredEntries = searchLower
+    ? entries.filter((e) => e.name.toLowerCase().includes(searchLower))
+    : entries;
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -99,6 +212,105 @@ export function FileBrowserApp({ config }: AppProps) {
           ))}
         </div>
       </div>
+      <div className="shrink-0 flex items-center gap-2 border-b border-border px-3 py-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search files and folders..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-8 pl-8 text-sm"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={() => {
+            setShowNewDirInput(true);
+            setNewDirName("");
+            setShowNewFileInput(false);
+          }}
+        >
+          <FolderPlus className="size-4" />
+          New folder
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="shrink-0 gap-1.5"
+          onClick={() => {
+            setShowNewFileInput(true);
+            setNewFileName("");
+            setShowNewDirInput(false);
+          }}
+        >
+          <FilePlus className="size-4" />
+          New file
+        </Button>
+      </div>
+      {showNewDirInput && (
+        <div className="shrink-0 flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
+          <Input
+            placeholder="Folder name"
+            value={newDirName}
+            onChange={(e) => setNewDirName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCreateDirectory();
+              if (e.key === "Escape") {
+                setShowNewDirInput(false);
+                setNewDirName("");
+              }
+            }}
+            className="h-8 text-sm"
+            autoFocus
+          />
+          <Button size="sm" onClick={handleCreateDirectory}>
+            Create
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setShowNewDirInput(false);
+              setNewDirName("");
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
+      {showNewFileInput && (
+        <div className="shrink-0 flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
+          <Input
+            placeholder="File name"
+            value={newFileName}
+            onChange={(e) => setNewFileName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleCreateFile();
+              if (e.key === "Escape") {
+                setShowNewFileInput(false);
+                setNewFileName("");
+              }
+            }}
+            className="h-8 text-sm"
+            autoFocus
+          />
+          <Button size="sm" onClick={handleCreateFile}>
+            Create
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setShowNewFileInput(false);
+              setNewFileName("");
+            }}
+          >
+            Cancel
+          </Button>
+        </div>
+      )}
       {error && (
         <div className="shrink-0 bg-destructive/10 px-3 py-1.5 text-sm text-destructive">
           {error}
@@ -110,7 +322,7 @@ export function FileBrowserApp({ config }: AppProps) {
             <div className="p-4 text-sm text-muted-foreground">Loading...</div>
           ) : (
             <ul className="divide-y divide-border">
-              {entries.map((e) => (
+              {filteredEntries.map((e) => (
                 <li
                   key={e.path}
                   className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted"
@@ -143,20 +355,36 @@ export function FileBrowserApp({ config }: AppProps) {
               ))}
             </ul>
           )}
+          {!loading && searchQuery.trim() && filteredEntries.length === 0 && (
+            <div className="p-4 text-sm text-muted-foreground">No matches for &quot;{searchQuery}&quot;</div>
+          )}
         </div>
         <div className="flex w-1/2 flex-col overflow-hidden">
           {previewPath ? (
             <>
-              <div className="shrink-0 border-b border-border px-3 py-1.5 text-xs text-muted-foreground">
-                {previewPath}
+              <div className="shrink-0 flex items-center justify-between gap-2 border-b border-border px-3 py-1.5">
+                <span className="truncate text-xs text-muted-foreground">{previewPath}</span>
+                {saveStatus === "saving" && (
+                  <span className="shrink-0 text-xs text-muted-foreground">Saving...</span>
+                )}
+                {saveStatus === "saved" && (
+                  <span className="shrink-0 text-xs text-green-600 dark:text-green-400">Saved</span>
+                )}
+                {saveStatus === "error" && (
+                  <span className="shrink-0 text-xs text-destructive">Save failed</span>
+                )}
               </div>
-              <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-3 font-mono text-xs text-foreground">
-                {previewContent}
-              </pre>
+              <textarea
+                className="flex-1 min-h-0 w-full resize-none overflow-auto border-0 bg-transparent p-3 font-mono text-xs text-foreground focus:outline-none focus:ring-0 disabled:opacity-70"
+                value={previewContent}
+                onChange={(e) => handlePreviewChange(e.target.value)}
+                disabled={!previewLoadOk}
+                spellCheck={false}
+              />
             </>
           ) : (
             <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-              Select a file to preview
+              Select a file to view and edit
             </div>
           )}
         </div>

@@ -116,13 +116,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const exists = state.workspaces.some((w) => w.id === id);
           if (!exists) return state;
           const workspace = state.workspaces.find((w) => w.id === id);
-          const now = Date.now();
           return {
             activeWorkspaceId: id,
             activeModes: workspace?.config.modes ?? state.activeModes,
-            workspaces: state.workspaces.map((w) =>
-              w.id === id ? { ...w, lastAccessedAt: now } : w
-            ),
           };
         }),
 
