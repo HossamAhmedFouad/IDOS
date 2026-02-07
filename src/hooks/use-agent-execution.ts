@@ -24,25 +24,6 @@ function sanitizeToolResultForAI(result: ToolResult): ToolResult {
   };
 }
 
-function applyUIUpdate(update: { type: "highlight" | "scroll" | "flash"; targetId: string }) {
-  const element = document.getElementById(update.targetId);
-  if (!element) return;
-
-  switch (update.type) {
-    case "highlight":
-      element.classList.add("agent-highlight");
-      setTimeout(() => element.classList.remove("agent-highlight"), 2000);
-      break;
-    case "scroll":
-      element.scrollIntoView({ behavior: "smooth" });
-      break;
-    case "flash":
-      element.classList.add("agent-flash");
-      setTimeout(() => element.classList.remove("agent-flash"), 500);
-      break;
-  }
-}
-
 async function parseSSEStream(
   reader: ReadableStreamDefaultReader<Uint8Array>,
   onEvent: (event: string, data: unknown) => void
@@ -164,10 +145,6 @@ export function useAgentExecution() {
           const event: AgentEvent = { type: eventType as AgentEvent["type"], data: data as Record<string, unknown> };
           addEventAndSync(event);
 
-          if (eventType === "tool-result" && data && typeof data === "object" && "uiUpdate" in data && data.uiUpdate) {
-            applyUIUpdate(data.uiUpdate as { type: "highlight" | "scroll" | "flash"; targetId: string });
-          }
-
           if (eventType === "tool-call") {
             const d = data as { toolName?: string; args?: Record<string, unknown> };
             const name = d?.toolName;
@@ -188,7 +165,6 @@ export function useAgentExecution() {
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
-                if (result.uiUpdate) applyUIUpdate(result.uiUpdate);
                 runContinue(sessionId, name, result);
               })
               .catch((err) => {
@@ -262,7 +238,6 @@ export function useAgentExecution() {
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
-                if (result.uiUpdate) applyUIUpdate(result.uiUpdate);
                 runContinue(apiSessionId, name, result);
               })
               .catch((err) => {

@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
 import { useToolRegistry } from "@/store/use-tool-registry";
 import { FilePickerDialog } from "@/components/file-picker";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,14 @@ export function NotesApp({ id, config }: AppProps) {
       setLoading(false);
     }
   }, [filePath, loadContent, draftContent]);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  useEffect(() => {
+    if (view === "agent" && agentDataVersion > 0 && filePath) {
+      loadContent(filePath);
+    }
+  }, [view, agentDataVersion, filePath, loadContent]);
 
   useEffect(() => {
     return () => {

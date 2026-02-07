@@ -20,6 +20,8 @@ interface AgentState {
   agentRunDialogOpen: boolean;
   /** On home screen: true = agent mode (intent runs agent, bottom-half panel visible). */
   homeAgentMode: boolean;
+  /** Bumped on each tool-result so file-based apps can refetch when on Agent view. */
+  agentDataVersion: number;
 
   startExecution: (intent: string) => void;
   addEvent: (event: AgentEvent) => void;
@@ -40,6 +42,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   streamingThinking: "",
   agentRunDialogOpen: false,
   homeAgentMode: false,
+  agentDataVersion: 0,
 
   startExecution: (intent) =>
     set({
@@ -62,6 +65,8 @@ export const useAgentStore = create<AgentState>((set) => ({
               timestamp: Date.now(),
             }
           : state.lastToolCall,
+      agentDataVersion:
+        event.type === "tool-result" ? state.agentDataVersion + 1 : state.agentDataVersion,
     })),
 
   completeExecution: () =>

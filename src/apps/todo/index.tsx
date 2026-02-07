@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
 import { useToolRegistry } from "@/store/use-tool-registry";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { createTodoTools } from "./tools";
@@ -56,6 +58,14 @@ export function TodoApp({ id, config }: AppProps) {
   useEffect(() => {
     loadTasks();
   }, [loadTasks]);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  useEffect(() => {
+    if (view === "agent" && agentDataVersion > 0) {
+      loadTasks();
+    }
+  }, [view, agentDataVersion, loadTasks]);
 
   const saveTasks = useCallback(async (newTasks: Task[]) => {
     setSaving(true);

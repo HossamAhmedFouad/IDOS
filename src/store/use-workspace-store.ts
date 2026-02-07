@@ -19,8 +19,11 @@ interface WorkspaceState {
   activeModes: SystemMode[];
   view: AppView;
   snapToGrid: boolean;
+  /** Agent view split: 0–1, left pane width ratio. Default 0.5. */
+  agentViewSplitRatio: number;
 
   setView: (view: AppView) => void;
+  setAgentViewSplitRatio: (ratio: number) => void;
   setSnapToGrid: (enabled: boolean) => void;
   createWorkspace: (config: WorkspaceConfig, label?: string) => void;
   setActiveWorkspace: (id: string | null) => void;
@@ -82,9 +85,12 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       activeModes: ["dark"],
       view: "home",
       snapToGrid: false,
+      agentViewSplitRatio: 0.5,
 
       setView: (view) => set({ view }),
       setSnapToGrid: (enabled) => set({ snapToGrid: enabled }),
+      setAgentViewSplitRatio: (ratio) =>
+        set({ agentViewSplitRatio: Math.max(0.2, Math.min(0.8, ratio)) }),
 
       createWorkspace: (config, label) =>
         set((state) => {
@@ -337,6 +343,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         activeModes: state.activeModes,
         view: state.view,
         snapToGrid: state.snapToGrid,
+        agentViewSplitRatio: state.agentViewSplitRatio,
       }),
       migrate: (persisted, version) => {
         const p = persisted as Record<string, unknown> | null;
@@ -381,6 +388,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             activeModes: old.activeModes ?? ["dark"],
             view: old.view ?? "home",
             snapToGrid: false,
+            agentViewSplitRatio: 0.5,
           } as WorkspaceState;
         }
         const merged = persisted as Record<string, unknown>;
@@ -390,6 +398,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           ...merged,
           activeModes,
           snapToGrid: merged?.snapToGrid ?? false,
+          agentViewSplitRatio: merged?.agentViewSplitRatio ?? 0.5,
         } as WorkspaceState;
       },
     }

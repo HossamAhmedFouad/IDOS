@@ -1,9 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star } from "lucide-react";
-import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star, GripVertical } from "lucide-react";
+import {
+  useWorkspaceStore,
+  selectActiveWorkspaceConfig,
+} from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentSessionsStore } from "@/store/use-agent-sessions-store";
@@ -17,14 +20,40 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IntentInput } from "@/features/intent/intent-input";
 import { cn } from "@/lib/utils";
+import type { AppId } from "@/lib/types";
+import { getAppName } from "@/lib/constants/app-catalog";
+import { getAppComponent } from "@/apps/registry";
+import { Suspense } from "react";
 
 const TOP_BAR_HEIGHT = 48;
+const MIN_PANE_WIDTH_PX = 280;
+
+function toolNameToAppId(toolName: string): AppId | null {
+  if (!toolName || typeof toolName !== "string") return null;
+  if (toolName.startsWith("notes_")) return "notes";
+  if (toolName.startsWith("todo_")) return "todo";
+  if (toolName.startsWith("calendar_")) return "calendar";
+  if (toolName.startsWith("file_browser_")) return "file-browser";
+  return null;
+}
+
+function AppLoadingFallback() {
+  return (
+    <div className="flex h-full items-center justify-center p-4">
+      <span className="text-sm text-muted-foreground">Loading...</span>
+    </div>
+  );
+}
 
 export function AgentView() {
   const setView = useWorkspaceStore((s) => s.setView);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
+  const workspace = useWorkspaceStore(selectActiveWorkspaceConfig);
+  const activeModes = useWorkspaceStore((s) => s.activeModes);
+  const agentViewSplitRatio = useWorkspaceStore((s) => s.agentViewSplitRatio);
+  const setAgentViewSplitRatio = useWorkspaceStore((s) => s.setAgentViewSplitRatio);
 
   const agentSessions = useAgentSessionsStore((s) => s.agentSessions);
   const activeAgentSessionId = useAgentSessionsStore((s) => s.activeAgentSessionId);
@@ -48,6 +77,9 @@ export function AgentView() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const leftPaneRef = useRef<HTMLDivElement>(null);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+  const [focusedAppIdOverride, setFocusedAppIdOverride] = useState<AppId | null>(null);
 
   const activeSession = agentSessions.find((s) => s.id === activeAgentSessionId);
   const isViewingLiveRun =
@@ -98,6 +130,77 @@ export function AgentView() {
 
   const noSessions = agentSessions.length === 0;
   const hasActiveSession = activeAgentSessionId != null;
+
+  // Reset focus override when session changes so focus follows latest run
+  useEffect(() => {
+    setFocusedAppIdOverride(null);
+  }, [activeAgentSessionId]);
+
+  // Affected apps: unique app IDs in order of first appearance in execution
+  const affectedAppIds = useMemo(() => {
+    const seen = new Set<AppId>();
+    const result: AppId[] = [];
+    for (const e of displayHistory) {
+      if (e.type !== "tool-call" && e.type !== "tool-result") continue;
+      const toolName = e.data?.toolName as string | undefined;
+      if (!toolName) continue;
+      const appId = toolNameToAppId(toolName);
+      if (appId && !seen.has(appId)) {
+        seen.add(appId);
+        result.push(appId);
+      }
+    }
+    return result;
+  }, [displayHistory]);
+
+  // Last executed app (most recent tool in history)
+  const activeAppId = useMemo(() => {
+    for (let i = displayHistory.length - 1; i >= 0; i--) {
+      const e = displayHistory[i];
+      const toolName =
+        e.type === "tool-call" || e.type === "tool-result"
+          ? (e.data?.toolName as string | undefined)
+          : undefined;
+      if (toolName) {
+        const appId = toolNameToAppId(toolName);
+        if (appId) return appId;
+      }
+    }
+    return null;
+  }, [displayHistory]);
+
+  // App shown in left pane: user-selected or last executed
+  const displayedAppId = focusedAppIdOverride ?? activeAppId;
+
+  // Instance id and config for the displayed app
+  const displayedAppInstance = useMemo(() => {
+    if (!displayedAppId) return null;
+    const match = workspace.apps?.find((app) => app.type === displayedAppId);
+    if (match) return { id: match.id, config: match.config };
+    return { id: `agent-preview-${displayedAppId}`, config: {} };
+  }, [displayedAppId, workspace.apps]);
+
+  // Resizable split: drag to update ratio
+  const handleSplitPointerDown = useCallback((e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingSplit(true);
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+  }, []);
+  const handleSplitPointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDraggingSplit) return;
+      const container = (e.target as HTMLElement).closest("[data-agent-split-container]");
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const ratio = (e.clientX - rect.left) / rect.width;
+      setAgentViewSplitRatio(ratio);
+    },
+    [isDraggingSplit, setAgentViewSplitRatio]
+  );
+  const handleSplitPointerUp = useCallback((e: React.PointerEvent) => {
+    setIsDraggingSplit(false);
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+  }, []);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
@@ -287,59 +390,158 @@ export function AgentView() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
-            {displayIntent && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30"
-              >
-                <div className="mb-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                  Intent
+          <div
+            data-agent-split-container
+            className="flex flex-1 min-h-0 w-full"
+          >
+            {/* Left: Tabbed view of affected apps (focus view) */}
+            <div
+              ref={leftPaneRef}
+              id="agent-placeholder"
+              className="flex flex-col shrink-0 overflow-hidden bg-background/50 border-r border-border/60"
+              style={{
+                width: `${agentViewSplitRatio * 100}%`,
+                minWidth: MIN_PANE_WIDTH_PX,
+              }}
+            >
+              {affectedAppIds.length === 0 ? (
+                <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
+                  <LayoutGrid className="size-8 opacity-50" />
+                  <p>The app being used will appear here when the agent runs a tool.</p>
                 </div>
-                <div className="text-sm text-foreground">{displayIntent}</div>
-              </motion.div>
-            )}
-            <div className="space-y-3">
-              {displayHistory.map((event, idx) => (
-                <AgentEventCard key={idx} event={event} />
-              ))}
+              ) : (
+                <>
+                  <div
+                    role="tablist"
+                    className="flex shrink-0 border-b border-border/60 bg-muted/30"
+                  >
+                    {affectedAppIds.map((appId) => {
+                      const isSelected = appId === displayedAppId;
+                      return (
+                        <button
+                          key={appId}
+                          type="button"
+                          role="tab"
+                          aria-selected={isSelected}
+                          onClick={() =>
+                            setFocusedAppIdOverride(isSelected ? null : appId)
+                          }
+                          className={cn(
+                            "border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                            isSelected
+                              ? "border-primary bg-background/80 text-primary"
+                              : "border-transparent text-muted-foreground hover:bg-background/50 hover:text-foreground"
+                          )}
+                        >
+                          {getAppName(appId)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {displayedAppId && displayedAppInstance && (
+                    <div className="relative flex-1 min-h-0 w-full overflow-auto">
+                      <Suspense fallback={<AppLoadingFallback />}>
+                        {(() => {
+                          const Component = getAppComponent(displayedAppId);
+                          const appProps = {
+                            id: displayedAppInstance.id,
+                            appType: displayedAppId,
+                            position: { x: 0, y: 0 },
+                            dimensions: { width: 800, height: 600 },
+                            activeModes,
+                            config: displayedAppInstance.config,
+                          };
+                          return <Component {...appProps} />;
+                        })()}
+                      </Suspense>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
-            {isViewingLiveRun && !streamingThinking && displayHistory.length === 0 && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-3 rounded-lg border border-border bg-muted/50 p-3"
-              >
-                <div className="text-sm text-muted-foreground">Starting…</div>
-              </motion.div>
-            )}
-            {isViewingLiveRun && streamingThinking && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="mt-3 animate-pulse rounded-lg border border-border bg-muted/50 p-3"
-              >
-                <div className="mb-1 text-xs text-muted-foreground">Thinking…</div>
-                <div className="text-sm text-foreground">{streamingThinking}</div>
-              </motion.div>
-            )}
-            {!isExecuting && hasActiveSession && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mt-6 max-w-4xl"
-              >
-                <p className="mb-2 text-sm font-medium text-muted-foreground">
-                  Run another task
-                </p>
-                <IntentInput
-                  submitIcon={Play}
-                  submitLabel="Run"
-                  onAgentSubmit={handleRunAnother}
-                />
-              </motion.div>
-            )}
+
+            {/* Resizable divider */}
+            <div
+              role="separator"
+              aria-label="Resize panes"
+              className={cn(
+                "w-2 shrink-0 cursor-col-resize flex items-center justify-center bg-border/30 hover:bg-border/60 transition-colors",
+                isDraggingSplit && "bg-primary/20"
+              )}
+              style={{ touchAction: "none" }}
+              onPointerDown={handleSplitPointerDown}
+              onPointerMove={handleSplitPointerMove}
+              onPointerUp={handleSplitPointerUp}
+              onPointerLeave={handleSplitPointerUp}
+            >
+              <GripVertical className="size-4 text-muted-foreground" />
+            </div>
+
+            {/* Right: Execution sequence */}
+            <div className="flex flex-1 flex-col min-w-0 overflow-y-auto px-4 py-4">
+              {displayIntent && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30"
+                >
+                  <div className="mb-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                    Intent
+                  </div>
+                  <div className="text-sm text-foreground">{displayIntent}</div>
+                </motion.div>
+              )}
+              <h3 className="mb-2 text-sm font-medium text-muted-foreground">
+                Execution sequence
+              </h3>
+              <div className="space-y-3">
+                {displayHistory
+                  .filter((e) => e.type !== "agent-start")
+                  .map((event, idx) => (
+                    <div key={idx} className="flex gap-2">
+                      <span className="shrink-0 mt-0.5 text-xs font-mono text-muted-foreground tabular-nums">
+                        {idx + 1}.
+                      </span>
+                      <AgentEventCard event={event} />
+                    </div>
+                  ))}
+              </div>
+              {isViewingLiveRun && !streamingThinking && displayHistory.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-3 rounded-lg border border-border bg-muted/50 p-3"
+                >
+                  <div className="text-sm text-muted-foreground">Starting…</div>
+                </motion.div>
+              )}
+              {isViewingLiveRun && streamingThinking && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="mt-3 animate-pulse rounded-lg border border-border bg-muted/50 p-3"
+                >
+                  <div className="mb-1 text-xs text-muted-foreground">Thinking…</div>
+                  <div className="text-sm text-foreground">{streamingThinking}</div>
+                </motion.div>
+              )}
+              {!isExecuting && hasActiveSession && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-6 max-w-4xl"
+                >
+                  <p className="mb-2 text-sm font-medium text-muted-foreground">
+                    Run another task
+                  </p>
+                  <IntentInput
+                    submitIcon={Play}
+                    submitLabel="Run"
+                    onAgentSubmit={handleRunAnother}
+                  />
+                </motion.div>
+              )}
+            </div>
           </div>
         )}
       </div>
