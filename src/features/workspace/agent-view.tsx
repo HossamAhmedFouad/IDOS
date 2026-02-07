@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { LayoutGrid, Home, Play } from "lucide-react";
+import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star } from "lucide-react";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
+import { useAgentSessionsStore } from "@/store/use-agent-sessions-store";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
 import { AgentEventCard } from "@/components/agent-panel";
 import { ParticleBackground } from "@/components/particle-background";
@@ -13,13 +14,26 @@ import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { IntentInput } from "@/features/intent/intent-input";
+import { cn } from "@/lib/utils";
+
+const TOP_BAR_HEIGHT = 48;
 
 export function AgentView() {
   const setView = useWorkspaceStore((s) => s.setView);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
+
+  const agentSessions = useAgentSessionsStore((s) => s.agentSessions);
+  const activeAgentSessionId = useAgentSessionsStore((s) => s.activeAgentSessionId);
+  const setActiveSession = useAgentSessionsStore((s) => s.setActiveSession);
+  const removeSession = useAgentSessionsStore((s) => s.removeSession);
+  const updateSessionLabel = useAgentSessionsStore((s) => s.updateSessionLabel);
+  const setSessionFavorite = useAgentSessionsStore((s) => s.setSessionFavorite);
+  const openAgentRunDialog = useAgentStore((s) => s.openAgentRunDialog);
+
   const backgroundType = usePersonalizationStore((s) => s.backgroundType);
   const particleSystem = usePersonalizationStore((s) => s.particleSystem);
   const particleShape = usePersonalizationStore((s) => s.particleShape);
@@ -31,12 +45,59 @@ export function AgentView() {
 
   const { executeIntent } = useAgentExecution();
 
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const renameInputRef = useRef<HTMLInputElement>(null);
+
+  const activeSession = agentSessions.find((s) => s.id === activeAgentSessionId);
+  const isViewingLiveRun =
+    activeSession?.status === "running" && isExecuting;
+  const displayHistory = isViewingLiveRun ? executionHistory : (activeSession?.executionHistory ?? []);
+  const displayIntent = isViewingLiveRun ? currentIntent : activeSession?.intent;
+
+  useEffect(() => {
+    if (agentSessions.length > 0 && activeAgentSessionId === null) {
+      setActiveSession(agentSessions[agentSessions.length - 1].id);
+    }
+  }, [agentSessions.length, activeAgentSessionId, setActiveSession, agentSessions]);
+
   const handleRunAnother = useCallback(
     (intent: string) => {
       executeIntent(intent);
     },
     [executeIntent]
   );
+
+  const startRename = (s: { id: string; label?: string; intent?: string }) => {
+    setRenamingId(s.id);
+    setRenameValue(s.label ?? s.intent ?? "");
+    setTimeout(() => renameInputRef.current?.focus(), 0);
+  };
+
+  const commitRename = () => {
+    if (renamingId != null) {
+      updateSessionLabel(renamingId, renameValue);
+      setRenamingId(null);
+      setRenameValue("");
+    }
+  };
+
+  const cancelRename = () => {
+    setRenamingId(null);
+    setRenameValue("");
+  };
+
+  const sortedSessions = [...agentSessions].sort((a, b) => {
+    const aFav = a.isFavorite ? 1 : 0;
+    const bFav = b.isFavorite ? 1 : 0;
+    if (aFav !== bFav) return bFav - aFav;
+    const aTime = a.lastAccessedAt ?? a.createdAt;
+    const bTime = b.lastAccessedAt ?? b.createdAt;
+    return bTime - aTime;
+  });
+
+  const noSessions = agentSessions.length === 0;
+  const hasActiveSession = activeAgentSessionId != null;
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-background">
@@ -51,14 +112,13 @@ export function AgentView() {
       />
 
       <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
-        <h2 className="text-lg font-semibold text-foreground">Agent</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 shrink items-center gap-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setView("home")}
-            className="gap-2 text-muted-foreground hover:text-foreground"
+            className="gap-2 shrink-0 text-muted-foreground hover:text-foreground"
             title="Home"
           >
             <Home className="size-4" />
@@ -77,73 +137,211 @@ export function AgentView() {
               }
             }}
             disabled={workspaces.length === 0}
-            className="gap-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            className="gap-2 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
             title={workspaces.length === 0 ? "No workspace" : "Workspace"}
           >
             <LayoutGrid className="size-4" />
             Workspace
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="gap-2 shrink-0 bg-primary/10 text-primary"
+            title="Agent"
+            aria-current="page"
+          >
+            <Sparkles className="size-4" />
+            Agent
+          </Button>
+          {agentSessions.length > 0 && (
+            <div className="flex items-center gap-1 overflow-x-auto">
+              {sortedSessions.map((s) => (
+                <div
+                  key={s.id}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1",
+                    s.id === activeAgentSessionId
+                      ? "border-primary/50 bg-primary/10"
+                      : "border-border/60 bg-background/50"
+                  )}
+                >
+                  {renamingId === s.id ? (
+                    <Input
+                      ref={renameInputRef}
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onBlur={commitRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") cancelRename();
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-7 min-w-[80px] max-w-[140px] border-muted-foreground/30 text-sm"
+                      placeholder="Name"
+                    />
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setActiveSession(s.id)}
+                        className="flex max-w-[140px] items-center gap-1.5 truncate rounded py-0.5 text-left text-sm text-foreground hover:bg-accent/50"
+                        title={s.intent ?? `Session ${agentSessions.indexOf(s) + 1}`}
+                      >
+                        <Sparkles className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">
+                          {s.label ?? s.intent ?? `Session ${agentSessions.indexOf(s) + 1}`}
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          startRename(s);
+                        }}
+                        className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+                        aria-label="Rename session"
+                        title="Rename session"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSessionFavorite(s.id, !s.isFavorite);
+                        }}
+                        className={cn(
+                          "shrink-0 rounded p-0.5",
+                          s.isFavorite ? "text-amber-500" : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                        )}
+                        aria-label={s.isFavorite ? "Unfavorite" : "Favorite"}
+                        title={s.isFavorite ? "Unfavorite" : "Add to favorites"}
+                      >
+                        <Star className={cn("size-3.5", s.isFavorite && "fill-current")} />
+                      </button>
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (renamingId === s.id) cancelRename();
+                      removeSession(s.id);
+                    }}
+                    className="shrink-0 rounded p-0.5 text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
+                    aria-label="Delete session"
+                    title="Delete session"
+                  >
+                    <Trash2 className="size-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={openAgentRunDialog}
+            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground"
+            title="New agent task"
+          >
+            <Plus className="size-4" />
+            New
           </Button>
         </div>
       </div>
 
       <div
         className="absolute left-0 right-0 bottom-0 z-20 flex flex-col overflow-hidden"
-        style={{ top: 56, bottom: TASKBAR_HEIGHT_PX }}
+        style={{ top: TOP_BAR_HEIGHT, bottom: TASKBAR_HEIGHT_PX }}
       >
-        <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
-          {currentIntent && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30"
-            >
-              <div className="mb-1 text-xs font-medium text-blue-600 dark:text-blue-400">
-                Intent
-              </div>
-              <div className="text-sm text-foreground">{currentIntent}</div>
-            </motion.div>
-          )}
-          <div className="space-y-3">
-            {executionHistory.map((event, idx) => (
-              <AgentEventCard key={idx} event={event} />
-            ))}
+        {noSessions ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+            <h2 className="text-xl font-medium text-muted-foreground">
+              No agent sessions yet
+            </h2>
+            <p className="max-w-md text-sm text-muted-foreground">
+              Run your first agent task from Home or use the shortcut Ctrl+K (Cmd+K on Mac).
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="default"
+                onClick={openAgentRunDialog}
+                className="gap-2"
+              >
+                <Sparkles className="size-4" />
+                Run agent task
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setView("home")}
+                className="gap-2"
+              >
+                <Home className="size-4" />
+                Go Home
+              </Button>
+            </div>
           </div>
-          {isExecuting && !streamingThinking && executionHistory.length === 0 && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-3 rounded-lg border border-border bg-muted/50 p-3"
-            >
-              <div className="text-sm text-muted-foreground">Starting…</div>
-            </motion.div>
-          )}
-          {isExecuting && streamingThinking && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-3 animate-pulse rounded-lg border border-border bg-muted/50 p-3"
-            >
-              <div className="mb-1 text-xs text-muted-foreground">Thinking…</div>
-              <div className="text-sm text-foreground">{streamingThinking}</div>
-            </motion.div>
-          )}
-          {!isExecuting && executionHistory.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 max-w-4xl"
-            >
-              <p className="mb-2 text-sm font-medium text-muted-foreground">
-                Run another task
-              </p>
-              <IntentInput
-                submitIcon={Play}
-                submitLabel="Run"
-                onAgentSubmit={handleRunAnother}
-              />
-            </motion.div>
-          )}
-        </div>
+        ) : (
+          <div className="flex flex-1 flex-col overflow-y-auto px-4 py-4">
+            {displayIntent && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30"
+              >
+                <div className="mb-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+                  Intent
+                </div>
+                <div className="text-sm text-foreground">{displayIntent}</div>
+              </motion.div>
+            )}
+            <div className="space-y-3">
+              {displayHistory.map((event, idx) => (
+                <AgentEventCard key={idx} event={event} />
+              ))}
+            </div>
+            {isViewingLiveRun && !streamingThinking && displayHistory.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-3 rounded-lg border border-border bg-muted/50 p-3"
+              >
+                <div className="text-sm text-muted-foreground">Starting…</div>
+              </motion.div>
+            )}
+            {isViewingLiveRun && streamingThinking && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-3 animate-pulse rounded-lg border border-border bg-muted/50 p-3"
+              >
+                <div className="mb-1 text-xs text-muted-foreground">Thinking…</div>
+                <div className="text-sm text-foreground">{streamingThinking}</div>
+              </motion.div>
+            )}
+            {!isExecuting && hasActiveSession && (
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-6 max-w-4xl"
+              >
+                <p className="mb-2 text-sm font-medium text-muted-foreground">
+                  Run another task
+                </p>
+                <IntentInput
+                  submitIcon={Play}
+                  submitLabel="Run"
+                  onAgentSubmit={handleRunAnother}
+                />
+              </motion.div>
+            )}
+          </div>
+        )}
       </div>
 
       <Taskbar />

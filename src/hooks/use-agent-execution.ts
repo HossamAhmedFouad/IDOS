@@ -3,7 +3,10 @@
 import { useCallback } from "react";
 import { useToolRegistry } from "@/store/use-tool-registry";
 import { useAgentStore } from "@/store/use-agent-store";
+import { useAgentSessionsStore } from "@/store/use-agent-sessions-store";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
 import type { AgentEvent, ToolResult } from "@/lib/types/agent";
+import type { AgentSessionStatus } from "@/lib/types/agent";
 
 const MAX_RESULT_SIZE = 12000;
 
@@ -73,12 +76,22 @@ async function parseSSEStream(
   }
 }
 
+function eventTypeToStatus(eventType: string): AgentSessionStatus {
+  if (eventType === "agent-complete") return "completed";
+  if (eventType === "agent-timeout") return "timeout";
+  if (eventType === "error") return "error";
+  return "completed";
+}
+
 export function useAgentExecution() {
   const getToolDefinitionsForAI = useToolRegistry((s) => s.getToolDefinitionsForAI);
   const getAllTools = useToolRegistry((s) => s.getAllTools);
   const startExecution = useAgentStore((s) => s.startExecution);
   const addEvent = useAgentStore((s) => s.addEvent);
   const completeExecution = useAgentStore((s) => s.completeExecution);
+  const createSession = useAgentSessionsStore((s) => s.createSession);
+  const updateSession = useAgentSessionsStore((s) => s.updateSession);
+  const setView = useWorkspaceStore((s) => s.setView);
 
   const executeIntent = useCallback(
     async (intent: string) => {
@@ -86,7 +99,24 @@ export function useAgentExecution() {
       const tools = getAllTools();
       const toolsByName = new Map(tools.map((t) => [t.name, t]));
 
+      const sessionId = createSession(intent);
+      setView("agent");
       startExecution(intent);
+
+      const addEventAndSync = (event: AgentEvent) => {
+        addEvent(event);
+        const history = useAgentStore.getState().executionHistory;
+        updateSession(sessionId, { executionHistory: history });
+      };
+
+      const completeAndSync = (eventType: string) => {
+        const history = useAgentStore.getState().executionHistory;
+        updateSession(sessionId, {
+          executionHistory: history,
+          status: eventTypeToStatus(eventType),
+        });
+        completeExecution();
+      };
 
       const runContinue = async (
         sessionId: string,
@@ -117,22 +147,22 @@ export function useAgentExecution() {
           res = await doFetch();
         }
         if (!res.body) {
-          addEvent({
+          addEventAndSync({
             type: "error",
             data: { message: res.ok ? "No response body" : `Request failed: ${res.status}` },
           });
-          completeExecution();
+          completeAndSync("error");
           return;
         }
         if (!res.ok) {
-          addEvent({ type: "error", data: { message: `Request failed: ${res.status}` } });
-          completeExecution();
+          addEventAndSync({ type: "error", data: { message: `Request failed: ${res.status}` } });
+          completeAndSync("error");
           return;
         }
 
         await parseSSEStream(res.body.getReader(), (eventType, data) => {
           const event: AgentEvent = { type: eventType as AgentEvent["type"], data: data as Record<string, unknown> };
-          addEvent(event);
+          addEventAndSync(event);
 
           if (eventType === "tool-result" && data && typeof data === "object" && "uiUpdate" in data && data.uiUpdate) {
             applyUIUpdate(data.uiUpdate as { type: "highlight" | "scroll" | "flash"; targetId: string });
@@ -144,17 +174,17 @@ export function useAgentExecution() {
             const args = d?.args ?? {};
             const tool = name ? toolsByName.get(name) : undefined;
             if (!name || !tool) {
-              addEvent({
+              addEventAndSync({
                 type: "error",
                 data: { message: name ? `Tool not found: ${name}` : "Missing tool name" },
               });
-              completeExecution();
+              completeAndSync("error");
               return;
             }
             tool
               .execute(args as Record<string, unknown>)
               .then((result) => {
-                addEvent({
+                addEventAndSync({
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
@@ -163,15 +193,15 @@ export function useAgentExecution() {
               })
               .catch((err) => {
                 const message = err instanceof Error ? err.message : "Tool execution failed";
-                addEvent({ type: "error", data: { message, toolName: name } });
-                completeExecution();
+                addEventAndSync({ type: "error", data: { message, toolName: name } });
+                completeAndSync("error");
               });
           } else if (
             eventType === "agent-complete" ||
             eventType === "agent-timeout" ||
             eventType === "error"
           ) {
-            completeExecution();
+            completeAndSync(eventType);
           }
         });
       };
@@ -188,70 +218,70 @@ export function useAgentExecution() {
 
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: res.statusText }));
-          addEvent({
+          addEventAndSync({
             type: "error",
             data: { message: (err as { error?: string }).error ?? "Request failed" },
           });
-          completeExecution();
+          completeAndSync("error");
           return;
         }
 
         if (!res.body) {
-          addEvent({ type: "error", data: { message: "No response body" } });
-          completeExecution();
+          addEventAndSync({ type: "error", data: { message: "No response body" } });
+          completeAndSync("error");
           return;
         }
 
-        let sessionId = "";
+        let apiSessionId = "";
 
         await parseSSEStream(res.body.getReader(), (eventType, data) => {
           const payload = data as Record<string, unknown>;
           if (eventType === "agent-start" && payload.sessionId) {
-            sessionId = String(payload.sessionId);
+            apiSessionId = String(payload.sessionId);
           }
 
           const event: AgentEvent = { type: eventType as AgentEvent["type"], data: payload };
-          addEvent(event);
+          addEventAndSync(event);
 
           if (eventType === "tool-call") {
             const name = payload?.toolName as string | undefined;
             const args = (payload?.args as Record<string, unknown>) ?? {};
             const tool = name ? toolsByName.get(name) : undefined;
             if (!name || !tool) {
-              addEvent({
+              addEventAndSync({
                 type: "error",
                 data: { message: name ? `Tool not found: ${name}` : "Missing tool name" },
               });
-              completeExecution();
+              completeAndSync("error");
               return;
             }
             tool
               .execute(args)
               .then((result) => {
-                addEvent({
+                addEventAndSync({
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
                 if (result.uiUpdate) applyUIUpdate(result.uiUpdate);
-                runContinue(sessionId, name, result);
+                runContinue(apiSessionId, name, result);
               })
               .catch((err) => {
                 const message = err instanceof Error ? err.message : "Tool execution failed";
-                addEvent({ type: "error", data: { message, toolName: name } });
-                completeExecution();
+                addEventAndSync({ type: "error", data: { message, toolName: name } });
+                completeAndSync("error");
               });
           } else if (
             eventType === "agent-complete" ||
             eventType === "agent-timeout" ||
             eventType === "error"
           ) {
-            completeExecution();
+            completeAndSync(eventType);
           }
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "Network error";
-        addEvent({ type: "error", data: { message } });
-        completeExecution();
+        addEventAndSync({ type: "error", data: { message } });
+        completeAndSync("error");
       }
     },
     [
@@ -260,6 +290,9 @@ export function useAgentExecution() {
       startExecution,
       addEvent,
       completeExecution,
+      createSession,
+      updateSession,
+      setView,
     ]
   );
 

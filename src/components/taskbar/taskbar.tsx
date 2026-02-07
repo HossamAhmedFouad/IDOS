@@ -3,13 +3,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Search, Bot } from "lucide-react";
+import { LayoutGrid, Search } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
   selectMinimizedAppIds,
 } from "@/store/use-workspace-store";
-import { useAgentStore } from "@/store/use-agent-store";
 import { APP_CATALOG } from "@/lib/constants/app-catalog";
 import { getAppIcon } from "@/lib/constants/app-icons";
 import type { AppId } from "@/lib/types";
@@ -24,7 +23,6 @@ export function Taskbar() {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const addApp = useWorkspaceStore((s) => s.addApp);
-  const openAgentRunDialog = useAgentStore((s) => s.openAgentRunDialog);
   const setMinimized = useWorkspaceStore((s) => s.setMinimized);
   const setView = useWorkspaceStore((s) => s.setView);
   const view = useWorkspaceStore((s) => s.view);
@@ -121,19 +119,6 @@ export function Taskbar() {
           aria-label="All apps"
         >
           <LayoutGrid className="size-7" />
-        </motion.button>
-
-        <motion.button
-          type="button"
-          whileHover={{ scale: 1.12 }}
-          whileTap={{ scale: 0.96 }}
-          transition={{ type: "spring", stiffness: 400, damping: 25 }}
-          className="flex size-14 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          onClick={openAgentRunDialog}
-          title="Run with agent (Ctrl+K / Cmd+K)"
-          aria-label="Run with agent"
-        >
-          <Bot className="size-7" />
         </motion.button>
 
         <div className="h-10 w-px bg-border/60" aria-hidden />

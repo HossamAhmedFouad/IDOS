@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Play } from "lucide-react";
+import { LayoutGrid, Play, Sparkles } from "lucide-react";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
@@ -122,8 +122,8 @@ export function HomeView() {
         particleShape={particleShape}
       />
 
-      {/* Top bar: Workspace button */}
-      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-end gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+      {/* Top bar: Workspace, Agent */}
+      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-end gap-2 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
         <Button
           type="button"
           variant="ghost"
@@ -145,6 +145,17 @@ export function HomeView() {
         >
           <LayoutGrid className="size-4" />
           Workspace
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setView("agent")}
+          className="gap-2 text-muted-foreground hover:text-foreground"
+          title="Agent (Ctrl+K / Cmd+K to run)"
+        >
+          <Sparkles className="size-4" />
+          Agent
         </Button>
       </div>
 

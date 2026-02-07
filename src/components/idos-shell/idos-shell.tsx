@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CustomContextMenu } from "@/components/context-menu";
 import { PersonalizationPanel } from "@/components/personalization-panel";
-import { AgentPanel, AgentRunDialog } from "@/components/agent-panel";
+import { AgentRunDialog } from "@/components/agent-panel";
 import { AgentToolRegistration } from "@/components/agent-tool-registration";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
@@ -38,7 +38,6 @@ export function IdosShell({ children }: { children: React.ReactNode }) {
       {children}
       <CustomContextMenu />
       <PersonalizationPanel />
-      <AgentPanel />
       <AgentRunDialog />
     </>
   );

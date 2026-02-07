@@ -15,7 +15,7 @@ import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star } from "lucide-react";
+import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { LayoutStrategy } from "@/lib/types/layout";
@@ -246,6 +246,17 @@ export function WorkspaceView() {
               ))}
             </div>
           )}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setView("agent")}
+            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground"
+            title="Agent (Ctrl+K / Cmd+K to run)"
+          >
+            <Sparkles className="size-4" />
+            Agent
+          </Button>
           <Button
             type="button"
             variant="ghost"

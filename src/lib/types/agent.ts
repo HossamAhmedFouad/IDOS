@@ -53,3 +53,16 @@ export interface AgentEvent {
   type: AgentEventType;
   data: Record<string, unknown>;
 }
+
+export type AgentSessionStatus = "running" | "completed" | "error" | "timeout";
+
+export interface AgentSession {
+  id: string;
+  intent: string;
+  label?: string;
+  executionHistory: AgentEvent[];
+  status: AgentSessionStatus;
+  createdAt: number;
+  lastAccessedAt?: number;
+  isFavorite?: boolean;
+}
