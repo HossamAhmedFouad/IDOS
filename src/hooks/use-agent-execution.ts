@@ -90,6 +90,7 @@ export function useAgentExecution() {
   const getToolDefinitionsForAI = useToolRegistry((s) => s.getToolDefinitionsForAI);
   const getAllTools = useToolRegistry((s) => s.getAllTools);
   const startExecution = useAgentStore((s) => s.startExecution);
+  const setExecutionHistory = useAgentStore((s) => s.setExecutionHistory);
   const incrementAgentDataVersion = useAgentStore((s) => s.incrementAgentDataVersion);
   const addEvent = useAgentStore((s) => s.addEvent);
   const completeExecution = useAgentStore((s) => s.completeExecution);
@@ -98,16 +99,31 @@ export function useAgentExecution() {
   const setView = useWorkspaceStore((s) => s.setView);
 
   const executeIntent = useCallback(
-    async (intent: string) => {
+    async (intent: string, options?: { continueInSession?: boolean }) => {
       const toolDefinitions = getToolDefinitionsForAI();
       const tools = getAllTools();
       const toolsByName = new Map(tools.map((t) => [t.name, t]));
 
-      const sessionId = createSession(intent);
+      const sessionsState = useAgentSessionsStore.getState();
+      const activeId = sessionsState.activeAgentSessionId;
+      const existingSession =
+        activeId != null
+          ? sessionsState.agentSessions.find((s) => s.id === activeId)
+          : undefined;
+      const backendSessionId = existingSession?.backendSessionId;
+      const continueInSession =
+        options?.continueInSession === true && !!activeId && !!backendSessionId;
+
+      const sessionId = continueInSession ? activeId! : createSession(intent);
       setView("agent");
       startExecution(intent);
-      // Clear whiteboard so agent runs start with empty canvas (no old drawings)
-      clearWhiteboardForNewRun().then(() => incrementAgentDataVersion());
+      if (continueInSession && existingSession?.executionHistory?.length) {
+        setExecutionHistory(existingSession.executionHistory);
+      }
+      if (!continueInSession) {
+        // Clear whiteboard so new agent runs start with empty canvas
+        clearWhiteboardForNewRun().then(() => incrementAgentDataVersion());
+      }
 
       const addEventAndSync = (event: AgentEvent) => {
         addEvent(event);
@@ -212,16 +228,28 @@ export function useAgentExecution() {
       };
 
       try {
-        const res = await fetch("/api/agent-execute", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            intent,
-            toolDefinitions,
-          }),
-        });
+        const res = await (continueInSession
+          ? fetch("/api/agent-execute/follow-up", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                sessionId: backendSessionId,
+                intent,
+              }),
+            })
+          : fetch("/api/agent-execute", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                intent,
+                toolDefinitions,
+              }),
+            }));
 
         if (!res.ok) {
+          if (res.status === 404 && continueInSession) {
+            updateSession(sessionId, { backendSessionId: undefined });
+          }
           const err = await res.json().catch(() => ({ error: res.statusText }));
           addEventAndSync({
             type: "error",
@@ -243,6 +271,7 @@ export function useAgentExecution() {
           const payload = data as Record<string, unknown>;
           if (eventType === "agent-start" && payload.sessionId) {
             apiSessionId = String(payload.sessionId);
+            updateSession(sessionId, { backendSessionId: apiSessionId });
           }
 
           const event: AgentEvent = { type: eventType as AgentEvent["type"], data: payload };
@@ -296,6 +325,7 @@ export function useAgentExecution() {
       getToolDefinitionsForAI,
       getAllTools,
       startExecution,
+      setExecutionHistory,
       addEvent,
       completeExecution,
       createSession,

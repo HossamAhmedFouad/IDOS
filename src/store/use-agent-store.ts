@@ -26,6 +26,8 @@ interface AgentState {
   lastCreatedNotePath: string | null;
 
   startExecution: (intent: string) => void;
+  /** Seed execution history (e.g. when continuing in same session). Call after startExecution. */
+  setExecutionHistory: (events: AgentEvent[]) => void;
   addEvent: (event: AgentEvent) => void;
   completeExecution: () => void;
   toggleAgentPanel: () => void;
@@ -58,6 +60,9 @@ export const useAgentStore = create<AgentState>((set) => ({
       lastToolCall: null,
       agentPanelOpen: true,
     }),
+
+  setExecutionHistory: (events) =>
+    set({ executionHistory: Array.isArray(events) ? [...events] : [] }),
 
   addEvent: (event) =>
     set((state) => ({

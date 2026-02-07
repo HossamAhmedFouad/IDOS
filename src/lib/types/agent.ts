@@ -66,4 +66,6 @@ export interface AgentSession {
   createdAt: number;
   lastAccessedAt?: number;
   isFavorite?: boolean;
+  /** Backend chat session id (server-side); used for follow-up messages in same chat. Not persisted. */
+  backendSessionId?: string;
 }

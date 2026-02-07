@@ -41,14 +41,23 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
         const blob = new Blob([content], { type: "application/json" });
         const scene = await loadFromBlob(blob, null, null);
         if (!mountedRef.current) return;
-        try {
-          api.updateScene({
-            elements: scene.elements,
-            appState: scene.appState ?? undefined,
+        // Defer so Excalidraw's internal _App is mounted before updateScene (setState)
+        const elements = scene.elements;
+        const appState = scene.appState ?? undefined;
+        requestAnimationFrame(() => {
+          if (!mountedRef.current) return;
+          requestAnimationFrame(() => {
+            if (!mountedRef.current) return;
+            try {
+              api.updateScene({
+                elements,
+                appState,
+              });
+            } catch {
+              // Excalidraw may not be mounted yet; ignore
+            }
           });
-        } catch {
-          // Excalidraw may not be mounted yet; ignore
-        }
+        });
       } catch {
         // File not found or invalid: start with empty scene
       }

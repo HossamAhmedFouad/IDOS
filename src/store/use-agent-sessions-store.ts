@@ -25,7 +25,7 @@ interface AgentSessionsState {
   setActiveSession: (id: string | null) => void;
   updateSession: (
     id: string,
-    partial: Partial<Pick<AgentSession, "executionHistory" | "status">>
+    partial: Partial<Pick<AgentSession, "executionHistory" | "status" | "backendSessionId">>
   ) => void;
   removeSession: (id: string) => void;
   updateSessionLabel: (id: string, label: string) => void;
@@ -128,7 +128,7 @@ export const useAgentSessionsStore = create<AgentSessionsState>()(
       name: "idos-agent-sessions",
       version: 1,
       partialize: (state) => ({
-        agentSessions: state.agentSessions,
+        agentSessions: state.agentSessions.map(({ backendSessionId: _, ...s }) => s),
         activeAgentSessionId: state.activeAgentSessionId,
       }),
     }

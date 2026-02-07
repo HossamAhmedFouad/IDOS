@@ -116,7 +116,7 @@ export function AgentView() {
 
   const handleRunAnother = useCallback(
     (intent: string) => {
-      executeIntent(intent);
+      executeIntent(intent, { continueInSession: true });
     },
     [executeIntent]
   );
