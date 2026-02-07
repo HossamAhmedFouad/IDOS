@@ -2,7 +2,12 @@
 
 import { useAgentStore } from "@/store/use-agent-store";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { MarkdownContent } from "@/components/markdown-content";
 import type { AgentEvent } from "@/lib/types/agent";
+
+function AgentCardBody({ text }: { text: string }) {
+  return <MarkdownContent content={text} />;
+}
 
 export function AgentEventCard({ event }: { event: AgentEvent }) {
   if (event.type === "agent-start") {
@@ -12,13 +17,15 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
   if (event.type === "tool-call") {
     const d = event.data as { toolName?: string; thinking?: string };
     return (
-      <div className="rounded-lg border border-purple-200 bg-purple-50 p-3 dark:border-purple-800 dark:bg-purple-950/30">
-        <div className="mb-1 text-xs font-medium text-purple-600 dark:text-purple-400">
+      <div className="rounded-lg border border-agent-accent/40 bg-[color-mix(in_oklch,var(--agent-accent)_12%,transparent)] p-3">
+        <div className="mb-1 text-xs font-medium text-agent-accent-foreground">
           Calling tool
         </div>
         <div className="font-mono text-sm text-foreground">{d.toolName ?? ""}</div>
         {d.thinking && (
-          <div className="mt-1 text-xs text-muted-foreground">{d.thinking}</div>
+          <div className="mt-2 text-sm text-muted-foreground">
+            <AgentCardBody text={d.thinking} />
+          </div>
         )}
       </div>
     );
@@ -31,19 +38,23 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
       <div
         className={`rounded-lg border p-3 ${
           success
-            ? "border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30"
-            : "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
+            ? "border-green-500/30 bg-green-500/10"
+            : "border-destructive/40 bg-destructive/10"
         }`}
       >
         <div
           className={`mb-1 text-xs font-medium ${
-            success ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+            success ? "text-green-600 dark:text-green-400" : "text-destructive"
           }`}
         >
           {success ? "Success" : "Failed"}
         </div>
         <div className="text-sm text-foreground">
-          {success ? "Tool executed successfully" : (d.result?.error ?? "Unknown error")}
+          {success ? (
+            "Tool executed successfully"
+          ) : (
+            <AgentCardBody text={d.result?.error ?? "Unknown error"} />
+          )}
         </div>
       </div>
     );
@@ -52,11 +63,13 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
   if (event.type === "agent-complete") {
     const d = event.data as { message?: string };
     return (
-      <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
-        <div className="mb-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+      <div className="rounded-lg border border-agent-accent/40 bg-[color-mix(in_oklch,var(--agent-accent)_12%,transparent)] p-3">
+        <div className="mb-1 text-xs font-medium text-agent-accent-foreground">
           Task complete
         </div>
-        <div className="text-sm text-foreground">{d.message ?? "Done."}</div>
+        <div className="text-sm text-foreground">
+          <AgentCardBody text={d.message ?? "Done."} />
+        </div>
       </div>
     );
   }
@@ -64,11 +77,13 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
   if (event.type === "error") {
     const d = event.data as { message?: string };
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-3 dark:border-red-800 dark:bg-red-950/30">
-        <div className="mb-1 text-xs font-medium text-red-600 dark:text-red-400">
+      <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
+        <div className="mb-1 text-xs font-medium text-destructive">
           Error
         </div>
-        <div className="text-sm text-foreground">{d.message ?? "Unknown error"}</div>
+        <div className="text-sm text-foreground">
+          <AgentCardBody text={d.message ?? "Unknown error"} />
+        </div>
       </div>
     );
   }
@@ -76,11 +91,13 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
   if (event.type === "agent-timeout") {
     const d = event.data as { message?: string };
     return (
-      <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
         <div className="mb-1 text-xs font-medium text-amber-600 dark:text-amber-400">
           Timeout
         </div>
-        <div className="text-sm text-foreground">{d.message ?? "Maximum iterations reached."}</div>
+        <div className="text-sm text-foreground">
+          <AgentCardBody text={d.message ?? "Maximum iterations reached."} />
+        </div>
       </div>
     );
   }
@@ -130,20 +147,24 @@ export function AgentPanel() {
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
         {currentIntent && (
-          <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-950/30">
-            <div className="mb-1 text-xs font-medium text-blue-600 dark:text-blue-400">
+          <div className="rounded-lg border border-primary/40 bg-primary/10 p-3">
+            <div className="mb-1 text-xs font-medium text-primary">
               Intent
             </div>
-            <div className="text-sm text-foreground">{currentIntent}</div>
+            <div className="text-sm text-foreground">
+              <MarkdownContent content={currentIntent} />
+            </div>
           </div>
         )}
         {executionHistory.map((event, idx) => (
           <AgentEventCard key={idx} event={event} />
         ))}
         {isExecuting && streamingThinking && (
-          <div className="animate-pulse rounded-lg border border-border bg-muted/50 p-3">
-            <div className="mb-1 text-xs text-muted-foreground">Thinking…</div>
-            <div className="text-sm text-foreground">{streamingThinking}</div>
+          <div className="animate-pulse rounded-lg border border-agent-accent/30 bg-[color-mix(in_oklch,var(--agent-accent)_8%,transparent)] p-3">
+            <div className="mb-1 text-xs text-agent-accent-foreground">Thinking…</div>
+            <div className="text-sm text-foreground">
+              <MarkdownContent content={streamingThinking} />
+            </div>
           </div>
         )}
       </div>

@@ -207,7 +207,7 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.92 }}
       transition={windowTransition}
-      className="absolute overflow-hidden rounded-xl border border-border bg-card shadow-xl"
+      className="absolute"
       style={{
         left: x,
         top: y,
@@ -217,17 +217,35 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         minHeight: MIN_WINDOW_HEIGHT,
       }}
     >
-      {/* Title bar - logo, drag area, minimize, close */}
-      <div
-        className={`flex cursor-grab items-center gap-2 border-b border-border/80 bg-muted/60 px-3 py-2 backdrop-blur-sm ${isDragging ? "cursor-grabbing" : ""}`}
-        onMouseDown={handleDragStart}
-      >
-        <AppIcon className="size-4 shrink-0 text-primary" aria-hidden />
-        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {title}
-        </span>
-        <div className="flex shrink-0 items-center gap-0.5">
-          {showMinimize && (
+      {/* Window chrome - overflow-hidden only on this inner div so resize handles aren't clipped */}
+      <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
+        {/* Title bar - logo, drag area, minimize, close */}
+        <div
+          className={`flex cursor-grab items-center gap-2 border-b border-border/80 bg-muted/60 px-3 py-2 backdrop-blur-sm ${isDragging ? "cursor-grabbing" : ""}`}
+          onMouseDown={handleDragStart}
+        >
+          <AppIcon className="size-4 shrink-0 text-primary" aria-hidden />
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+            {title}
+          </span>
+          <div className="flex shrink-0 items-center gap-0.5">
+            {showMinimize && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setMinimized(appId, true);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                aria-label="Minimize"
+              >
+                <Minus className="size-4" />
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -236,40 +254,25 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setMinimized(appId, true);
+                removeApp(appId);
               }}
               onMouseDown={(e) => e.stopPropagation()}
-              aria-label="Minimize"
+              aria-label="Close"
             >
-              <Minus className="size-4" />
+              <X className="size-4" />
             </Button>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              removeApp(appId);
-            }}
-            onMouseDown={(e) => e.stopPropagation()}
-            aria-label="Close"
-          >
-            <X className="size-4" />
-          </Button>
+          </div>
         </div>
+
+        {/* App content */}
+        <div className="h-[calc(100%-40px)] overflow-auto bg-card">{children}</div>
       </div>
 
-      {/* App content */}
-      <div className="h-[calc(100%-40px)] overflow-auto bg-card">{children}</div>
-
-      {/* Resize handles */}
+      {/* Resize handles - outside overflow-hidden so they receive pointer events when extending past edges */}
       {resizeHandles.map((handle) => (
         <div
           key={handle}
-          className="absolute bg-transparent"
+          className="absolute z-10 bg-transparent"
           style={{
             ...getResizeHandleStyle(handle, width, height),
           }}
@@ -285,7 +288,7 @@ function getResizeHandleStyle(
   width: number,
   height: number
 ): React.CSSProperties {
-  const size = 4;
+  const size = 8;
   const half = size / 2;
   const isCorner = handle.length === 2;
   const w = isCorner ? size : handle.includes("e") || handle.includes("w") ? size : width - size * 2;

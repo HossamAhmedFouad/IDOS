@@ -5,6 +5,9 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --color-agent-accent: var(--agent-accent);
+  --color-agent-accent-muted: var(--agent-accent-muted);
+  --color-agent-accent-foreground: var(--agent-accent-foreground);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -81,6 +84,35 @@
   --sidebar-accent-foreground: oklch(0.96 0 0);
   --sidebar-border: oklch(0.26 0.03 265);
   --sidebar-ring: oklch(0.6 0.22 265);
+  /* Agent panel accent — distinct tone from user message (primary) */
+  --agent-accent: oklch(0.45 0.12 200);
+  --agent-accent-muted: oklch(0.35 0.08 200);
+  --agent-accent-foreground: oklch(0.85 0.04 200);
+}
+[data-theme="violet"] {
+  --agent-accent: oklch(0.5 0.14 200);
+  --agent-accent-muted: oklch(0.35 0.08 200);
+  --agent-accent-foreground: oklch(0.88 0.03 200);
+}
+[data-theme="blue"] {
+  --agent-accent: oklch(0.48 0.14 180);
+  --agent-accent-muted: oklch(0.35 0.08 180);
+  --agent-accent-foreground: oklch(0.88 0.03 180);
+}
+[data-theme="green"] {
+  --agent-accent: oklch(0.5 0.12 220);
+  --agent-accent-muted: oklch(0.35 0.08 220);
+  --agent-accent-foreground: oklch(0.88 0.03 220);
+}
+[data-theme="rose"] {
+  --agent-accent: oklch(0.5 0.12 190);
+  --agent-accent-muted: oklch(0.35 0.08 190);
+  --agent-accent-foreground: oklch(0.88 0.03 190);
+}
+[data-theme="amber"] {
+  --agent-accent: oklch(0.5 0.12 240);
+  --agent-accent-muted: oklch(0.35 0.08 240);
+  --agent-accent-foreground: oklch(0.88 0.03 240);
 }
 
 /* IDOS: Theme presets — override primary/accent/chart by hue */
