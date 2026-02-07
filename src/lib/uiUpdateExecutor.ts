@@ -4,6 +4,7 @@
  */
 
 import type { AppSpecificUIUpdate } from "@/lib/types/uiUpdates";
+import { getCodeEditorBridge } from "@/lib/code-editor-bridge";
 
 export type OnBeforeNextUpdateCallback = (nextUpdate: AppSpecificUIUpdate) => void | Promise<void>;
 
@@ -501,9 +502,15 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "code_editor_type_code" }>
   ): Promise<void> {
+    const bridge = getCodeEditorBridge(element.id);
+    if (bridge) {
+      bridge.setContent(update.code);
+      return;
+    }
+
     const editorEl = element.querySelector("[data-code-editor]") || element;
     const textarea = editorEl.querySelector("textarea");
-    const target = textarea ?? (editorEl.querySelector("[data-code-content]") as HTMLElement) ?? editorEl;
+    const target = textarea ?? (editorEl.querySelector("[data-code-content]") as HTMLElement) ?? element;
     const speed = update.speed ?? 35;
     const delay = 1000 / speed;
     const content = update.code;
@@ -535,9 +542,16 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "code_editor_line_highlight" }>
   ): Promise<void> {
-    const editorEl = element.querySelector("[data-code-editor]") || element;
+    const bridge = getCodeEditorBridge(element.id);
     const color = update.color ?? "oklch(0.75 0.15 85 / 0.4)";
     const duration = update.duration ?? 2000;
+
+    if (bridge) {
+      bridge.setLineHighlight(update.lineNumbers, color, duration);
+      return;
+    }
+
+    const editorEl = element.querySelector("[data-code-editor]") || element;
 
     for (const lineNum of update.lineNumbers) {
       const lineEl = editorEl.querySelector(`[data-line="${lineNum}"]`);

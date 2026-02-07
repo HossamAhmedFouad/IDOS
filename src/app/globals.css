@@ -559,6 +559,17 @@
 }
 
 /* ----- Code Editor ----- */
+/* One Dark–style base so syntax highlighting is readable; theme="dark" does the rest */
+[data-code-editor] .cm-editor {
+  background: #282c34;
+}
+[data-code-editor] .cm-scroller {
+  background: #282c34;
+}
+[data-code-editor] .cm-content {
+  color: #abb2bf;
+}
+
 .code-editor-flash {
   animation: code-editor-flash 0.3s ease-out;
 }

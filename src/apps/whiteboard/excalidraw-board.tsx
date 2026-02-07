@@ -41,23 +41,18 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
         const blob = new Blob([content], { type: "application/json" });
         const scene = await loadFromBlob(blob, null, null);
         if (!mountedRef.current) return;
-        // Defer so Excalidraw's internal _App is mounted before updateScene (setState)
         const elements = scene.elements;
         const appState = scene.appState ?? undefined;
-        requestAnimationFrame(() => {
+        // Defer to next macrotask so Excalidraw's internal _App is mounted before updateScene (setState)
+        const runUpdate = () => {
           if (!mountedRef.current) return;
-          requestAnimationFrame(() => {
-            if (!mountedRef.current) return;
-            try {
-              api.updateScene({
-                elements,
-                appState,
-              });
-            } catch {
-              // Excalidraw may not be mounted yet; ignore
-            }
-          });
-        });
+          try {
+            api.updateScene({ elements, appState });
+          } catch {
+            // Excalidraw may not be mounted yet; ignore
+          }
+        };
+        setTimeout(runUpdate, 0);
       } catch {
         // File not found or invalid: start with empty scene
       }
@@ -106,13 +101,10 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
   useEffect(() => {
     if (reloadTrigger == null || reloadTrigger <= 0 || !excalidrawAPIRef.current) return;
     const api = excalidrawAPIRef.current;
-    // Defer until after paint so Excalidraw's internal _App is mounted
     let cancelled = false;
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        if (!cancelled) loadScene(api);
-      });
-    });
+    setTimeout(() => {
+      if (!cancelled) loadScene(api);
+    }, 0);
     return () => {
       cancelled = true;
     };
@@ -159,10 +151,8 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
           <Excalidraw
             excalidrawAPI={(api) => {
               excalidrawAPIRef.current = api;
-              // Defer until after paint so Excalidraw's internal _App is mounted
-              requestAnimationFrame(() => {
-                requestAnimationFrame(() => loadScene(api));
-              });
+              // Defer to next macrotask so Excalidraw's internal _App is mounted before loadScene calls updateScene
+              setTimeout(() => loadScene(api), 0);
             }}
             onChange={(elements, appState, files) => {
               scheduleSave(elements, appState, files);

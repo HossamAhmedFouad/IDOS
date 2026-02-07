@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import type { AppProps } from "@/lib/types";
 import {
   readFile,
@@ -17,9 +17,27 @@ import { cn } from "@/lib/utils";
 import { FolderPickerDialog } from "@/components/file-picker";
 import { createCodeEditorTools } from "./tools";
 import { Button } from "@/components/ui/button";
+import CodeMirror from "@uiw/react-codemirror";
+import { javascript } from "@codemirror/lang-javascript";
+import { java } from "@codemirror/lang-java";
+import { python } from "@codemirror/lang-python";
+import { registerCodeEditorBridge, unregisterCodeEditorBridge } from "@/lib/code-editor-bridge";
+import {
+  lineHighlightField,
+  setLineHighlight as setLineHighlightCmd,
+  clearLineHighlight,
+} from "./line-highlight-extension";
 
 const DEFAULT_DIRECTORY = "/code";
 const SIDEBAR_WIDTH = 280;
+
+function languageFromPath(path: string) {
+  const ext = path.replace(/^.*\./, "").toLowerCase();
+  if (ext === "js" || ext === "jsx" || ext === "ts" || ext === "tsx" || ext === "mjs" || ext === "cjs") return javascript;
+  if (ext === "java") return java;
+  if (ext === "py" || ext === "pyw") return python;
+  return javascript;
+}
 
 function dirname(path: string): string {
   const p = path.replace(/\/$/, "");
@@ -51,6 +69,8 @@ export function CodeEditorApp({ id, config }: AppProps) {
   const [initDone, setInitDone] = useState(false);
   const [openFolderOpen, setOpenFolderOpen] = useState(false);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
+  const editorViewRef = useRef<import("@codemirror/view").EditorView | null>(null);
+  const lineHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const ensureDirectoryExists = useCallback(async () => {
     try {
@@ -180,6 +200,46 @@ export function CodeEditorApp({ id, config }: AppProps) {
   const openOpenFolderDialog = useCallback(() => setOpenFolderOpen(true), []);
   const openNewFolderDialog = useCallback(() => setNewFolderOpen(true), []);
 
+  const codeEditorExtensions = useMemo(
+    () => [lineHighlightField(), activeFile ? languageFromPath(activeFile)() : javascript()],
+    [activeFile]
+  );
+
+  useEffect(() => {
+    return () => {
+      unregisterCodeEditorBridge(id);
+      if (lineHighlightTimeoutRef.current) clearTimeout(lineHighlightTimeoutRef.current);
+    };
+  }, [id]);
+
+  const handleCreateEditor = useCallback(
+    (view: import("@codemirror/view").EditorView) => {
+      editorViewRef.current = view;
+      registerCodeEditorBridge(id, {
+        setContent(content: string) {
+          const v = editorViewRef.current;
+          if (!v) return;
+          const len = v.state.doc.length;
+          v.dispatch({ changes: { from: 0, to: len, insert: content } });
+        },
+        setLineHighlight(lineNumbersArr: number[], color: string, durationMs: number) {
+          const v = editorViewRef.current;
+          if (!v) return;
+          if (lineHighlightTimeoutRef.current) {
+            clearTimeout(lineHighlightTimeoutRef.current);
+            lineHighlightTimeoutRef.current = null;
+          }
+          setLineHighlightCmd(v, lineNumbersArr, color);
+          lineHighlightTimeoutRef.current = setTimeout(() => {
+            clearLineHighlight(v);
+            lineHighlightTimeoutRef.current = null;
+          }, durationMs);
+        },
+      });
+    },
+    [id]
+  );
+
   if (!initDone) {
     return (
       <div className="flex h-full items-center justify-center p-4">
@@ -301,18 +361,22 @@ export function CodeEditorApp({ id, config }: AppProps) {
             </div>
           )}
         </div>
-        <div data-code-editor className="flex-1 min-h-0 overflow-hidden">
+        <div data-code-editor className="flex-1 min-h-0 overflow-hidden flex flex-col">
           {activeFile ? (
-            <textarea
-              data-code-content
-              spellCheck={false}
-              className="h-full w-full resize-none border-0 bg-background p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-0"
-              placeholder="// Start coding..."
-              value={currentContent}
-              onChange={(e) => handleContentChange(activeFile, e.target.value)}
-              onBlur={handleBlur}
-              style={{ tabSize: 2 }}
-            />
+            <div className="flex-1 min-h-0 overflow-hidden [&_.cm-editor]:h-full [&_.cm-scroller]:overflow-auto">
+              <CodeMirror
+                value={currentContent}
+                height="100%"
+                className="h-full border-0 rounded-none code-editor-codemirror"
+                theme="dark"
+                extensions={codeEditorExtensions}
+                onChange={(value) => handleContentChange(activeFile, value)}
+                onBlur={handleBlur}
+                onCreateEditor={handleCreateEditor}
+                basicSetup={true}
+                data-code-content
+              />
+            </div>
           ) : (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Select a file from the explorer
