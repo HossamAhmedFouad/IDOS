@@ -44,6 +44,8 @@ export interface IntentInputProps {
   };
   /** When true and onAgentSubmit is used, do not reset loading after submit (parent controls transition). */
   keepLoadingAfterAgentSubmit?: boolean;
+  /** When set, overrides internal loading state (e.g. parent passes isExecuting so bar clears when agent completes). */
+  loading?: boolean;
 }
 
 export function IntentInput({
@@ -55,9 +57,11 @@ export function IntentInput({
   onAgentSubmit,
   modeSelect,
   keepLoadingAfterAgentSubmit = false,
+  loading: loadingProp,
 }: IntentInputProps = {}) {
   const [intent, setIntent] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [internalLoading, setInternalLoading] = useState(false);
+  const loading = loadingProp !== undefined ? loadingProp : internalLoading;
   const [error, setError] = useState<string | null>(null);
   const [focused, setFocused] = useState(false);
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
@@ -113,7 +117,7 @@ export function IntentInput({
       const text = intent.trim();
 
       onSubmitting?.();
-      setLoading(true);
+      setInternalLoading(true);
       setError(null);
 
       if (!text) {
@@ -122,14 +126,14 @@ export function IntentInput({
           if (workspaces.length > 0) {
             onSuccess?.();
           }
-          setLoading(false);
+          setInternalLoading(false);
         }, 800);
         return;
       }
 
       if (onAgentSubmit) {
         onAgentSubmit(text);
-        if (!keepLoadingAfterAgentSubmit) setLoading(false);
+        if (!keepLoadingAfterAgentSubmit) setInternalLoading(false);
         return;
       }
 
@@ -160,7 +164,7 @@ export function IntentInput({
       } catch (err) {
         setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
-        setLoading(false);
+        setInternalLoading(false);
       }
     },
     [intent, loading, createWorkspace, workspaces.length, onSubmitting, onSuccess, onAgentSubmit, keepLoadingAfterAgentSubmit]

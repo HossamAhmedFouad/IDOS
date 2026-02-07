@@ -12,7 +12,7 @@ import {
 import type { ToolDefinitionForAI } from "@/lib/types/agent";
 
 const AGENT_MODEL = "gemini-3-flash-preview";
-const MAX_ITERATIONS = 10;
+const MAX_ITERATIONS = 40;
 
 function mapPropertyToSchema(prop: {
   type: string;
@@ -91,12 +91,13 @@ ${toolList.map((t) => `- ${t.name}: ${t.description}`).join("\n")}
 Your goal: ${intent}
 
 Think step-by-step:
-1. Determine which tools you need
-2. Call tools in the right order
-3. Use results from previous tools to inform next steps
-4. Continue until the task is complete
+1. Determine which tools you need to fully satisfy the user's request.
+2. Call tools in the right order (one tool call per step; the system will send you the result and you can then call the next).
+3. Use results from previous tools to inform the next steps.
+4. Do NOT respond with only text ("Done", "Task complete", etc.) until the user's request is fully done. If more tool calls are needed to complete the goal, always make the next tool call instead of replying with text.
+5. Only when every part of the user's intent is satisfied (e.g. all requested items created, drawn, or updated), then reply briefly with a summary—no further tool call.
 
-Always explain briefly what you're doing before calling a tool.`;
+Always explain briefly what you're doing before calling a tool. Prefer calling more tools to finish the task rather than stopping early.`;
 }
 
 export function createAgentModel(

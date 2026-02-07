@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { motion } from "framer-motion";
-import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star, GripVertical } from "lucide-react";
+import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star, GripVertical, Loader2 } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
@@ -99,6 +99,7 @@ export function AgentView() {
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
   const leftPaneRef = useRef<HTMLDivElement>(null);
+  const executionScrollRef = useRef<HTMLDivElement>(null);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [focusedAppIdOverride, setFocusedAppIdOverride] = useState<AppId | null>(null);
 
@@ -171,6 +172,13 @@ export function AgentView() {
     uiUpdateExecutor.setOnBeforeNextUpdate(onBeforeNextUpdate);
     return () => uiUpdateExecutor.setOnBeforeNextUpdate(null);
   }, []);
+
+  // Auto-scroll execution list to latest event
+  useEffect(() => {
+    const el = executionScrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+  }, [displayHistory.length, streamingThinking]);
 
   // Affected apps: unique app IDs in order of first appearance in execution
   const affectedAppIds = useMemo(() => {
@@ -503,73 +511,83 @@ export function AgentView() {
               <GripVertical className="size-4 text-muted-foreground" />
             </div>
 
-            {/* Right: Execution sequence — agent accent tone to contrast with user Intent (primary) */}
-            <div className="flex flex-1 flex-col min-w-0 overflow-y-auto bg-[color-mix(in_oklch,var(--agent-accent-muted)_4%,transparent)] px-4 py-4">
-              {displayIntent && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3"
-                >
-                  <div className="mb-1 text-xs font-medium text-primary">
-                    Intent
-                  </div>
-                  <div className="text-sm text-foreground">
-                    <MarkdownContent content={displayIntent} />
-                  </div>
-                </motion.div>
-              )}
-              <h3 className="mb-2 text-sm font-medium text-agent-accent-foreground">
-                Execution sequence
-              </h3>
-              <div className="space-y-3">
-                {displayHistory
-                  .filter((e) => e.type !== "agent-start")
-                  .map((event, idx) => (
-                    <div key={idx} className="flex gap-2">
-                      <span className="shrink-0 mt-0.5 text-xs font-mono text-muted-foreground tabular-nums">
-                        {idx + 1}.
-                      </span>
-                      <AgentEventCard event={event} />
+            {/* Right: Execution sequence (scrollable) + chat bar below */}
+            <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-[color-mix(in_oklch,var(--agent-accent-muted)_4%,transparent)]">
+              {/* Scrollable execution list — auto-scrolls to latest */}
+              <div
+                ref={executionScrollRef}
+                className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4"
+              >
+                {displayIntent && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3"
+                  >
+                    <div className="mb-1 text-xs font-medium text-primary">
+                      Intent
                     </div>
-                  ))}
+                    <div className="text-sm text-foreground">
+                      <MarkdownContent content={displayIntent} />
+                    </div>
+                  </motion.div>
+                )}
+                <h3 className="mb-2 text-sm font-medium text-agent-accent-foreground">
+                  Execution sequence
+                </h3>
+                <div className="space-y-3">
+                  {displayHistory
+                    .filter((e) => e.type !== "agent-start")
+                    .map((event, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <span className="shrink-0 mt-0.5 text-xs font-mono text-muted-foreground tabular-nums">
+                          {idx + 1}.
+                        </span>
+                        <AgentEventCard event={event} />
+                      </div>
+                    ))}
+                </div>
+                {/* Loading UI under messages: small strip until first response */}
+                {isViewingLiveRun && isExecuting && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-3 flex items-center gap-2 rounded-lg border border-agent-accent/20 bg-[color-mix(in_oklch,var(--agent-accent)_6%,transparent)] px-3 py-2"
+                  >
+                    {streamingThinking ? (
+                      <>
+                        <Loader2 className="size-3.5 shrink-0 animate-spin text-agent-accent-foreground" />
+                        <span className="text-xs font-medium text-agent-accent-foreground">Thinking…</span>
+                        <div className="min-w-0 flex-1 overflow-hidden text-ellipsis text-sm text-foreground line-clamp-1">
+                          <MarkdownContent content={streamingThinking} />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <Loader2 className="size-3.5 shrink-0 animate-spin text-agent-accent-foreground" />
+                        <span className="text-sm text-agent-accent-foreground">
+                          {displayHistory.filter((e) => e.type !== "agent-start").length === 0
+                            ? "Starting…"
+                            : "Getting response…"}
+                        </span>
+                      </>
+                    )}
+                  </motion.div>
+                )}
               </div>
-              {isViewingLiveRun && !streamingThinking && displayHistory.length === 0 && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-3 rounded-lg border border-agent-accent/20 bg-[color-mix(in_oklch,var(--agent-accent)_6%,transparent)] p-3"
-                >
-                  <div className="text-sm text-agent-accent-foreground">Starting…</div>
-                </motion.div>
-              )}
-              {isViewingLiveRun && streamingThinking && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mt-3 animate-pulse rounded-lg border border-agent-accent/30 bg-[color-mix(in_oklch,var(--agent-accent)_8%,transparent)] p-3"
-                >
-                  <div className="mb-1 text-xs text-agent-accent-foreground">Thinking…</div>
-                  <div className="text-sm text-foreground">
-                    <MarkdownContent content={streamingThinking} />
+              {/* Chat bar: smaller, fixed under execution list */}
+              {hasActiveSession && (
+                <div className="shrink-0 border-t border-border/60 bg-background/60 px-3 py-2">
+                  <div className="mx-auto max-w-2xl">
+                    <IntentInput
+                      submitIcon={Play}
+                      submitLabel="Run"
+                      onAgentSubmit={handleRunAnother}
+                      keepLoadingAfterAgentSubmit
+                      loading={isExecuting}
+                    />
                   </div>
-                </motion.div>
-              )}
-              {!isExecuting && hasActiveSession && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="mt-6 max-w-4xl"
-                >
-                  <p className="mb-2 text-sm font-medium text-muted-foreground">
-                    Run another task
-                  </p>
-                  <IntentInput
-                    submitIcon={Play}
-                    submitLabel="Run"
-                    onAgentSubmit={handleRunAnother}
-                  />
-                </motion.div>
+                </div>
               )}
             </div>
           </div>
