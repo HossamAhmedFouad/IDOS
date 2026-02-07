@@ -177,3 +177,58 @@
 .flip-card-back {
   transform: rotateY(180deg);
 }
+
+/* Agent control: visual feedback for tool-driven UI updates */
+@keyframes agent-highlight {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: oklch(0.6 0.22 265 / 0.2);
+    box-shadow: 0 0 0 3px oklch(0.6 0.22 265 / 0.3);
+  }
+}
+
+.agent-highlight {
+  animation: agent-highlight 2s ease-in-out;
+}
+
+@keyframes agent-flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.agent-flash {
+  animation: agent-flash 0.5s ease-in-out;
+}
+
+.agent-controlled-app {
+  position: relative;
+}
+
+.agent-controlled-app::after {
+  content: "🤖";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  animation: agent-pulse 2s infinite;
+}
+
+@keyframes agent-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}

@@ -202,6 +202,7 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
 
   return (
     <motion.div
+      id={appId}
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.92 }}

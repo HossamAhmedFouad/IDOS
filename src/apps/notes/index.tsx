@@ -1,15 +1,27 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useToolRegistry } from "@/store/use-tool-registry";
 import { FilePickerDialog } from "@/components/file-picker";
 import { Button } from "@/components/ui/button";
 import { FolderOpen, FileDown } from "lucide-react";
+import { createNotesTools } from "./tools";
 
 export function NotesApp({ id, config }: AppProps) {
   const filePath = config?.filePath as string | undefined;
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const notesTools = useMemo(() => createNotesTools(id), [id]);
+
+  useEffect(() => {
+    notesTools.forEach((tool) => registerTool(tool));
+    return () => {
+      notesTools.forEach((tool) => unregisterTool(tool.name));
+    };
+  }, [notesTools, registerTool, unregisterTool]);
   const draftContent = config?.draftContent as string | undefined;
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
   const [content, setContent] = useState(() =>

@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
+import { useToolRegistry } from "@/store/use-tool-registry";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { createTodoTools } from "./tools";
 
 const DEFAULT_PATH = "/todo/tasks.json";
 
@@ -23,8 +25,17 @@ function loadTasksFromJson(json: string): Task[] {
   }
 }
 
-export function TodoApp({ config }: AppProps) {
+export function TodoApp({ id, config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const todoTools = useMemo(() => createTodoTools(id), [id]);
+
+  useEffect(() => {
+    todoTools.forEach((tool) => registerTool(tool));
+    return () => todoTools.forEach((tool) => unregisterTool(tool.name));
+  }, [todoTools, registerTool, unregisterTool]);
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -111,6 +122,7 @@ export function TodoApp({ config }: AppProps) {
       <ul className="flex-1 space-y-2 overflow-auto">
         {tasks.map((task) => (
           <li
+            id={task.id}
             key={task.id}
             className="flex items-center gap-2 rounded border border-border bg-muted px-3 py-2"
           >
@@ -136,6 +148,7 @@ export function TodoApp({ config }: AppProps) {
             </button>
           </li>
         ))}
+        <li id="todo-list-bottom" className="h-0 overflow-hidden" aria-hidden />
       </ul>
     </div>
   );

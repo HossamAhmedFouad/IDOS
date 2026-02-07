@@ -10,9 +10,11 @@ import {
   deleteDirectory,
   createDirectory,
 } from "@/lib/file-system";
+import { useToolRegistry } from "@/store/use-tool-registry";
 import { Folder, File, Trash2, FolderPlus, FilePlus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { fileBrowserTools } from "./tools";
 
 const ROOT = "/";
 const AUTO_SAVE_DELAY_MS = 600;
@@ -25,6 +27,14 @@ interface FileEntry {
 
 export function FileBrowserApp({ config }: AppProps) {
   const rootPath = (config?.rootPath as string | undefined) ?? ROOT;
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+
+  useEffect(() => {
+    fileBrowserTools.forEach((tool) => registerTool(tool));
+    return () => fileBrowserTools.forEach((tool) => unregisterTool(tool.name));
+  }, [registerTool, unregisterTool]);
+
   const [currentPath, setCurrentPath] = useState(rootPath);
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(true);

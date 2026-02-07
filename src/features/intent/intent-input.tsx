@@ -3,10 +3,17 @@
 import type { LucideIcon } from "lucide-react";
 import { useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
+import { ChevronDown } from "lucide-react";
 import type { WorkspaceConfig } from "@/lib/types/workspace";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
 const PLACEHOLDER_MESSAGES = [
   "Take notes and set a 25 min timer...",
@@ -28,6 +35,15 @@ export interface IntentInputProps {
   submitIcon?: LucideIcon;
   /** Called when the intent input value changes. */
   onIntentChange?: (value: string) => void;
+  /** When set, submit runs the agent with this intent instead of parse-intent (no workspace switch). */
+  onAgentSubmit?: (intent: string) => void;
+  /** When set, shows a mode dropdown (Workspace | Agent) in the input row. */
+  modeSelect?: {
+    value: "workspace" | "agent";
+    onChange: (value: "workspace" | "agent") => void;
+  };
+  /** When true and onAgentSubmit is used, do not reset loading after submit (parent controls transition). */
+  keepLoadingAfterAgentSubmit?: boolean;
 }
 
 export function IntentInput({
@@ -36,6 +52,9 @@ export function IntentInput({
   submitLabel = "Go",
   submitIcon: SubmitIcon,
   onIntentChange,
+  onAgentSubmit,
+  modeSelect,
+  keepLoadingAfterAgentSubmit = false,
 }: IntentInputProps = {}) {
   const [intent, setIntent] = useState("");
   const [loading, setLoading] = useState(false);
@@ -108,6 +127,12 @@ export function IntentInput({
         return;
       }
 
+      if (onAgentSubmit) {
+        onAgentSubmit(text);
+        if (!keepLoadingAfterAgentSubmit) setLoading(false);
+        return;
+      }
+
       try {
         const res = await fetch("/api/parse-intent", {
           method: "POST",
@@ -138,8 +163,11 @@ export function IntentInput({
         setLoading(false);
       }
     },
-    [intent, loading, createWorkspace, workspaces.length, onSubmitting, onSuccess]
+    [intent, loading, createWorkspace, workspaces.length, onSubmitting, onSuccess, onAgentSubmit, keepLoadingAfterAgentSubmit]
   );
+
+  const [modePopoverOpen, setModePopoverOpen] = useState(false);
+  const modeLabel = modeSelect?.value === "agent" ? "Agent" : "Workspace";
 
   return (
     <motion.form
@@ -160,6 +188,54 @@ export function IntentInput({
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
+        {modeSelect && (
+          <Popover open={modePopoverOpen} onOpenChange={setModePopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent/60"
+                aria-label="Choose mode"
+              >
+                <span>{modeLabel}</span>
+                <ChevronDown className="size-4 text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-44 p-2">
+              <div className="flex flex-col gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    modeSelect.onChange("workspace");
+                    setModePopoverOpen(false);
+                  }}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                    modeSelect.value === "workspace"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-foreground hover:bg-accent/60"
+                  )}
+                >
+                  Workspace
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    modeSelect.onChange("agent");
+                    setModePopoverOpen(false);
+                  }}
+                  className={cn(
+                    "rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                    modeSelect.value === "agent"
+                      ? "bg-accent text-accent-foreground"
+                      : "text-foreground hover:bg-accent/60"
+                  )}
+                >
+                  Agent
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
         <div className="relative min-h-12 flex-1">
           <Input
             type="text"

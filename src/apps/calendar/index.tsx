@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
+import { useToolRegistry } from "@/store/use-tool-registry";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { calendarTools } from "./tools";
 
 const DEFAULT_PATH = "/calendar/events.json";
 const SCHEDULE_START_HOUR = 0;
@@ -71,6 +73,14 @@ const TIME_OPTIONS = (() => {
 
 export function CalendarApp({ config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+
+  useEffect(() => {
+    calendarTools.forEach((tool) => registerTool(tool));
+    return () => calendarTools.forEach((tool) => unregisterTool(tool.name));
+  }, [registerTool, unregisterTool]);
+
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => new Date());
   const [showForm, setShowForm] = useState(false);

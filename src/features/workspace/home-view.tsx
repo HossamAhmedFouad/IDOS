@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid, Play } from "lucide-react";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
+import { useAgentStore } from "@/store/use-agent-store";
+import { useAgentExecution } from "@/hooks/use-agent-execution";
 import { IntentInput } from "@/features/intent/intent-input";
 import { IntentBlob } from "@/components/intent-blob";
 import { ParticleBackground } from "@/components/particle-background";
@@ -26,6 +28,8 @@ const LOADING_MESSAGES = [
   "Hang tight...",
   "Crafting your experience...",
   "Getting everything ready...",
+  "Starting agent...",
+  "Preparing agent...",
 ];
 
 export function HomeView() {
@@ -36,7 +40,23 @@ export function HomeView() {
   const backgroundType = usePersonalizationStore((s) => s.backgroundType);
   const particleSystem = usePersonalizationStore((s) => s.particleSystem);
   const particleShape = usePersonalizationStore((s) => s.particleShape);
+  const homeAgentMode = useAgentStore((s) => s.homeAgentMode);
+  const setHomeAgentMode = useAgentStore((s) => s.setHomeAgentMode);
+  const { executeIntent } = useAgentExecution();
   const [loading, setLoading] = useState(false);
+
+  const handleAgentSubmit = useCallback(
+    (intent: string) => {
+      setLoading(true);
+      const delayMs = 1800;
+      setTimeout(() => {
+        setView("agent");
+        setLoading(false);
+        executeIntent(intent);
+      }, delayMs);
+    },
+    [executeIntent, setView]
+  );
   const [intentLength, setIntentLength] = useState(0);
   const [blobCenter, setBlobCenter] = useState<{ x: number; y: number } | null>(
     null
@@ -103,7 +123,7 @@ export function HomeView() {
       />
 
       {/* Top bar: Workspace button */}
-      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-end gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
         <Button
           type="button"
           variant="ghost"
@@ -189,6 +209,12 @@ export function HomeView() {
                     onIntentChange={(v) => setIntentLength(v.length)}
                     onSubmitting={() => setLoading(true)}
                     onSuccess={handleSuccess}
+                    onAgentSubmit={homeAgentMode ? handleAgentSubmit : undefined}
+                    keepLoadingAfterAgentSubmit={!!homeAgentMode}
+                    modeSelect={{
+                      value: homeAgentMode ? "agent" : "workspace",
+                      onChange: (v) => setHomeAgentMode(v === "agent"),
+                    }}
                   />
                 </div>
               </motion.div>

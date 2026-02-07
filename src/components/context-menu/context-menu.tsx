@@ -10,7 +10,7 @@ import {
   Info,
   type LucideIcon,
 } from "lucide-react";
-import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useWorkspaceStore, type AppView } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { AboutModal } from "@/components/about-modal";
 
@@ -23,7 +23,7 @@ type MenuItem = {
 };
 
 function getMenuItems(
-  setView: (v: "home" | "workspace") => void,
+  setView: (v: AppView) => void,
   openPersonalization: () => void,
   openAbout: () => void
 ): MenuItem[] {

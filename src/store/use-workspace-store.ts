@@ -10,7 +10,7 @@ import { APP_DEFAULT_SIZES } from "@/lib/constants/app-defaults";
 
 const WORKSPACE_LABEL_MAX_LEN = 40;
 
-export type AppView = "home" | "workspace";
+export type AppView = "home" | "workspace" | "agent";
 
 interface WorkspaceState {
   workspaces: Workspace[];
