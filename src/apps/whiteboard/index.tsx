@@ -1,7 +1,12 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { AppProps } from "@/lib/types";
+import { useToolRegistry } from "@/store/use-tool-registry";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
+import { createWhiteboardTools } from "./tools";
 
 const WHITEBOARD_DIR = "/whiteboard";
 
@@ -20,13 +25,26 @@ const ExcalidrawBoard = dynamic(
 export function WhiteboardApp({ id, config }: AppProps) {
   const filePath =
     (config?.filePath as string | undefined) ?? `${WHITEBOARD_DIR}/${id}.json`;
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const whiteboardTools = useMemo(() => createWhiteboardTools(id), [id]);
+
+  useEffect(() => {
+    whiteboardTools.forEach((tool) => registerTool(tool));
+    return () => whiteboardTools.forEach((tool) => unregisterTool(tool.name));
+  }, [whiteboardTools, registerTool, unregisterTool]);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  const reloadTrigger = view === "agent" ? agentDataVersion : undefined;
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div id={id} data-whiteboard className="flex h-full min-h-0 flex-col overflow-hidden">
       <div className="relative min-h-0 flex-1 overflow-hidden">
         <ExcalidrawBoard
           filePath={filePath}
           className="absolute inset-0 h-full w-full"
+          reloadTrigger={reloadTrigger}
         />
       </div>
     </div>

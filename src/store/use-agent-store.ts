@@ -34,6 +34,8 @@ interface AgentState {
   closeAgentRunDialog: () => void;
   setHomeAgentMode: (v: boolean) => void;
   setLastCreatedNotePath: (path: string | null) => void;
+  /** Bump agentDataVersion so file-based apps (e.g. whiteboard) refetch. */
+  incrementAgentDataVersion: () => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
@@ -89,4 +91,6 @@ export const useAgentStore = create<AgentState>((set) => ({
   closeAgentRunDialog: () => set({ agentRunDialogOpen: false }),
   setHomeAgentMode: (v) => set({ homeAgentMode: v }),
   setLastCreatedNotePath: (path) => set({ lastCreatedNotePath: path }),
+  incrementAgentDataVersion: () =>
+    set((s) => ({ agentDataVersion: s.agentDataVersion + 1 })),
 }));

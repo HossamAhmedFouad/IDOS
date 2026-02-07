@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, Clock } from "lucide-react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
 import { useToolRegistry } from "@/store/use-tool-registry";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { calendarTools } from "./tools";
+import { createCalendarTools } from "./tools";
 
 const DEFAULT_PATH = "/calendar/events.json";
 const SCHEDULE_START_HOUR = 0;
@@ -71,15 +73,16 @@ const TIME_OPTIONS = (() => {
   return opts;
 })();
 
-export function CalendarApp({ config }: AppProps) {
+export function CalendarApp({ id, config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
   const registerTool = useToolRegistry((s) => s.registerTool);
   const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const calendarTools = useMemo(() => createCalendarTools(id), [id]);
 
   useEffect(() => {
     calendarTools.forEach((tool) => registerTool(tool));
     return () => calendarTools.forEach((tool) => unregisterTool(tool.name));
-  }, [registerTool, unregisterTool]);
+  }, [calendarTools, registerTool, unregisterTool]);
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => new Date());
@@ -106,6 +109,14 @@ export function CalendarApp({ config }: AppProps) {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  useEffect(() => {
+    if (view === "agent" && agentDataVersion > 0) {
+      loadEvents();
+    }
+  }, [view, agentDataVersion, loadEvents]);
 
   const saveEvents = useCallback(
     async (newEvents: CalendarEvent[]) => {
@@ -178,7 +189,7 @@ export function CalendarApp({ config }: AppProps) {
   }
 
   return (
-    <div className="flex h-full flex-col overflow-hidden p-4">
+    <div id={id} className="flex h-full flex-col overflow-hidden p-4">
       {saving && (
         <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
@@ -195,8 +206,8 @@ export function CalendarApp({ config }: AppProps) {
         </div>
 
         {/* Right column: Events / Timeline */}
-        <div className="flex min-h-0 flex-col overflow-auto">
-          <h4 className="mb-2 shrink-0 text-sm font-medium text-foreground">
+        <div id={`${id}-event-list`} data-event-list className="flex min-h-0 flex-col overflow-auto">
+          <h4 data-calendar-date={selectedStr} className="mb-2 shrink-0 text-sm font-medium text-foreground">
             {format(activeDate, "EEEE, MMM d")}
           </h4>
 
@@ -210,6 +221,7 @@ export function CalendarApp({ config }: AppProps) {
                 {allDayEvents.map((evt) => (
                   <li
                     key={evt.id}
+                    data-event-id={evt.id}
                     className="flex items-center justify-between gap-2 rounded border border-border bg-card px-2 py-1"
                   >
                     <span className="text-sm text-foreground">{evt.title}</span>
@@ -258,6 +270,7 @@ export function CalendarApp({ config }: AppProps) {
                       {slotEvents.map((evt) => (
                         <div
                           key={evt.id}
+                          data-event-id={evt.id}
                           className="mb-1 flex items-center justify-between rounded border border-primary/30 bg-primary/10 px-2 py-1"
                         >
                           <div>
@@ -265,7 +278,7 @@ export function CalendarApp({ config }: AppProps) {
                               {evt.title}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {formatTime12h(evt.time)}
+                              {formatTime12h(evt.time ?? "")}
                               {evt.endTime ? ` – ${formatTime12h(evt.endTime)}` : ""}
                             </p>
                           </div>

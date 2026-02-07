@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import {
   readFile,
@@ -10,6 +10,8 @@ import {
   deleteDirectory,
 } from "@/lib/file-system";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useToolRegistry } from "@/store/use-tool-registry";
+import { createQuizTools } from "./tools";
 import { Folder, FolderPlus, Trash2, ChevronRight, PanelLeftClose, PanelLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +45,14 @@ function toTopicSlug(name: string): string {
 
 export function QuizApp({ id, config }: AppProps) {
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const quizTools = useMemo(() => createQuizTools(id), [id]);
+
+  useEffect(() => {
+    quizTools.forEach((tool) => registerTool(tool));
+    return () => quizTools.forEach((tool) => unregisterTool(tool.name));
+  }, [quizTools, registerTool, unregisterTool]);
   const rootPath = (config?.directoryPath as string | undefined) ?? QUIZ_ROOT;
   const savedFilePath = config?.filePath as string | undefined;
   const legacySinglePath = rootPath + "/" + CARDS_FILENAME;

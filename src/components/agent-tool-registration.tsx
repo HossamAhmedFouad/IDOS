@@ -5,8 +5,13 @@ import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { useToolRegistry } from "@/store/use-tool-registry";
 import { createNotesTools } from "@/apps/notes/tools";
 import { createTodoTools } from "@/apps/todo/tools";
-import { calendarTools } from "@/apps/calendar/tools";
-import { fileBrowserTools } from "@/apps/file-browser/tools";
+import { createCalendarTools } from "@/apps/calendar/tools";
+import { createFileBrowserTools } from "@/apps/file-browser/tools";
+import { createTimerTools } from "@/apps/timer/tools";
+import { createCodeEditorTools } from "@/apps/code-editor/tools";
+import { createEmailTools } from "@/apps/email/tools";
+import { createWhiteboardTools } from "@/apps/whiteboard/tools";
+import { createQuizTools } from "@/apps/quiz/tools";
 
 /**
  * Placeholder app instance id used when registering tools for the agent
@@ -29,7 +34,14 @@ export function AgentToolRegistration() {
   const tools = useMemo(() => {
     const notes = createNotesTools(AGENT_PLACEHOLDER_ID);
     const todo = createTodoTools(AGENT_PLACEHOLDER_ID);
-    return [...notes, ...todo, ...calendarTools, ...fileBrowserTools];
+    const calendar = createCalendarTools(AGENT_PLACEHOLDER_ID);
+    const fileBrowser = createFileBrowserTools(AGENT_PLACEHOLDER_ID);
+    const timer = createTimerTools(AGENT_PLACEHOLDER_ID);
+    const codeEditor = createCodeEditorTools(AGENT_PLACEHOLDER_ID);
+    const email = createEmailTools(AGENT_PLACEHOLDER_ID);
+    const whiteboard = createWhiteboardTools(AGENT_PLACEHOLDER_ID);
+    const quiz = createQuizTools(AGENT_PLACEHOLDER_ID);
+    return [...notes, ...todo, ...calendar, ...fileBrowser, ...timer, ...codeEditor, ...email, ...whiteboard, ...quiz];
   }, []);
 
   useEffect(() => {

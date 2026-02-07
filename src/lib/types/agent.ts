@@ -20,6 +20,7 @@ export interface AppToolParameters {
       type: string;
       description: string;
       enum?: string[];
+      items?: { type: string };
     }
   >;
   required: string[];

@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
+import { useToolRegistry } from "@/store/use-tool-registry";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
+import { createEmailTools } from "./tools";
 
 const DEFAULT_PATH = "/email/draft.json";
 
@@ -25,8 +29,16 @@ function parseDraft(json: string): Draft {
   }
 }
 
-export function EmailApp({ config }: AppProps) {
+export function EmailApp({ id, config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const emailTools = useMemo(() => createEmailTools(id), [id]);
+
+  useEffect(() => {
+    emailTools.forEach((tool) => registerTool(tool));
+    return () => emailTools.forEach((tool) => unregisterTool(tool.name));
+  }, [emailTools, registerTool, unregisterTool]);
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -56,6 +68,14 @@ export function EmailApp({ config }: AppProps) {
   useEffect(() => {
     loadDraft();
   }, [loadDraft]);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  useEffect(() => {
+    if (view === "agent" && agentDataVersion > 0) {
+      loadDraft();
+    }
+  }, [view, agentDataVersion, loadDraft]);
 
   const saveDraft = useCallback(async () => {
     setSaving(true);
@@ -113,14 +133,14 @@ export function EmailApp({ config }: AppProps) {
   }
 
   return (
-    <div className="flex h-full flex-col p-4">
+    <div id={id} className="flex h-full flex-col p-4">
       {sendStatus !== "idle" && (
         <div className="mb-2 text-xs">
           {sendStatus === "success" && <span className="text-green-600 dark:text-green-400">Email sent.</span>}
           {sendStatus === "error" && <span className="text-red-600 dark:text-red-400">{sendError}</span>}
         </div>
       )}
-      <div className="mb-3">
+      <div className="mb-3" data-email-to>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
           To
         </label>
@@ -133,7 +153,7 @@ export function EmailApp({ config }: AppProps) {
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
-      <div className="mb-3">
+      <div className="mb-3" data-email-subject>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
           Subject
         </label>
@@ -146,7 +166,7 @@ export function EmailApp({ config }: AppProps) {
           className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
-      <div className="mb-3 flex-1 min-h-0">
+      <div className="mb-3 flex-1 min-h-0" data-email-body>
         <label className="mb-1 block text-xs font-medium text-muted-foreground">
           Body
         </label>
@@ -158,6 +178,7 @@ export function EmailApp({ config }: AppProps) {
           className="h-full w-full min-h-[120px] resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
         />
       </div>
+      <div data-email-attachments className="mb-3 flex flex-wrap gap-1" />
       <button
         type="button"
         onClick={handleSend}

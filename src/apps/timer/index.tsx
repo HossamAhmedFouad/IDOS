@@ -1,26 +1,104 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
+import { readFile, writeFile } from "@/lib/file-system";
+import { useToolRegistry } from "@/store/use-tool-registry";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
+import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
+import { createTimerTools } from "./tools";
 
-export function TimerApp(props: AppProps) {
-  const [seconds, setSeconds] = useState(25 * 60); // 25 min default
+const TIMER_STATE_PATH = "/timer/state.json";
+
+interface TimerState {
+  durationSeconds: number;
+  startedAt: number | null;
+}
+
+function parseTimerState(raw: string): TimerState {
+  try {
+    const data = JSON.parse(raw);
+    return {
+      durationSeconds: typeof data?.durationSeconds === "number" ? data.durationSeconds : 25 * 60,
+      startedAt: typeof data?.startedAt === "number" ? data.startedAt : null,
+    };
+  } catch {
+    return { durationSeconds: 25 * 60, startedAt: null };
+  }
+}
+
+export function TimerApp({ id, config }: AppProps) {
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const timerTools = useMemo(() => createTimerTools(id), [id]);
+
+  useEffect(() => {
+    timerTools.forEach((tool) => registerTool(tool));
+    return () => timerTools.forEach((tool) => unregisterTool(tool.name));
+  }, [timerTools, registerTool, unregisterTool]);
+
+  const [seconds, setSeconds] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
   const [preset, setPreset] = useState(25);
+  const [loading, setLoading] = useState(true);
+
+  const loadState = useCallback(async () => {
+    setLoading(true);
+    try {
+      const raw = await readFile(TIMER_STATE_PATH);
+      const state = parseTimerState(raw);
+      setPreset(Math.round(state.durationSeconds / 60));
+      if (state.startedAt !== null) {
+        const elapsed = Math.floor((Date.now() - state.startedAt) / 1000);
+        const remaining = Math.max(0, state.durationSeconds - elapsed);
+        setSeconds(remaining);
+        setIsRunning(remaining > 0);
+      } else {
+        setSeconds(state.durationSeconds);
+        setIsRunning(false);
+      }
+    } catch {
+      setSeconds(25 * 60);
+      setPreset(25);
+      setIsRunning(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+
+  useEffect(() => {
+    loadState();
+  }, [loadState]);
+
+  useEffect(() => {
+    if (view === "agent" && agentDataVersion > 0) {
+      loadState();
+    }
+  }, [view, agentDataVersion, loadState]);
 
   useEffect(() => {
     if (!isRunning) return;
-    const id = setInterval(() => {
+    const intervalId = setInterval(() => {
       setSeconds((s) => {
         if (s <= 1) {
           setIsRunning(false);
+          void writeFile(TIMER_STATE_PATH, JSON.stringify({ durationSeconds: 0, startedAt: null }, null, 2));
+          void uiUpdateExecutor.execute({
+            type: "timer_complete_celebration",
+            targetId: id,
+            message: "Timer complete!",
+          });
           return 0;
         }
         return s - 1;
       });
     }, 1000);
-    return () => clearInterval(id);
-  }, [isRunning]);
+    return () => clearInterval(intervalId);
+  }, [isRunning, id]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -28,16 +106,41 @@ export function TimerApp(props: AppProps) {
     return `${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
   };
 
-  const handleStart = useCallback(() => setIsRunning(true), []);
-  const handlePause = useCallback(() => setIsRunning(false), []);
-  const handleReset = useCallback(() => {
+  const handleStart = useCallback(async () => {
+    const state = { durationSeconds: seconds, startedAt: Date.now() };
+    await writeFile(TIMER_STATE_PATH, JSON.stringify(state, null, 2));
+    setIsRunning(true);
+  }, [seconds]);
+
+  const handlePause = useCallback(async () => {
+    await writeFile(
+      TIMER_STATE_PATH,
+      JSON.stringify({ durationSeconds: seconds, startedAt: null }, null, 2)
+    );
     setIsRunning(false);
-    setSeconds(preset * 60);
+  }, [seconds]);
+
+  const handleReset = useCallback(async () => {
+    const newSeconds = preset * 60;
+    await writeFile(
+      TIMER_STATE_PATH,
+      JSON.stringify({ durationSeconds: newSeconds, startedAt: null }, null, 2)
+    );
+    setIsRunning(false);
+    setSeconds(newSeconds);
   }, [preset]);
 
+  if (loading) {
+    return (
+      <div className="flex h-full items-center justify-center p-4">
+        <span className="text-sm text-muted-foreground">Loading...</span>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 p-6">
-      <div className="text-4xl font-mono font-medium tabular-nums text-foreground">
+    <div id={id} className="relative flex h-full flex-col items-center justify-center gap-4 p-6">
+      <div data-timer-display className="text-4xl font-mono font-medium tabular-nums text-foreground">
         {formatTime(seconds)}
       </div>
       <div className="flex gap-2">

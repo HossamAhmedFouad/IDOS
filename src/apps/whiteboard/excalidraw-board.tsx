@@ -21,31 +21,47 @@ const SAVE_DEBOUNCE_MS = 600;
 export interface ExcalidrawBoardProps {
   filePath: string;
   className?: string;
+  /** When this changes, the scene is reloaded from file (e.g. after agent modifies it) */
+  reloadTrigger?: number;
 }
 
-export function ExcalidrawBoard({ filePath, className }: ExcalidrawBoardProps) {
+export function ExcalidrawBoard({ filePath, className, reloadTrigger }: ExcalidrawBoardProps) {
   const excalidrawAPIRef = useRef<ExcalidrawImperativeAPI | null>(null);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
+  const mountedRef = useRef(true);
+
   const loadScene = useCallback(
     async (api: ExcalidrawImperativeAPI) => {
       try {
         const content = await readFile(filePath);
-        if (!content?.trim()) return;
+        if (!content?.trim() || !mountedRef.current) return;
         const blob = new Blob([content], { type: "application/json" });
         const scene = await loadFromBlob(blob, null, null);
-        api.updateScene({
-          elements: scene.elements,
-          appState: scene.appState ?? undefined,
-        });
+        if (!mountedRef.current) return;
+        try {
+          api.updateScene({
+            elements: scene.elements,
+            appState: scene.appState ?? undefined,
+          });
+        } catch {
+          // Excalidraw may not be mounted yet; ignore
+        }
       } catch {
         // File not found or invalid: start with empty scene
       }
     },
     [filePath]
   );
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   const scheduleSave = useCallback(
     (
@@ -77,6 +93,21 @@ export function ExcalidrawBoard({ filePath, className }: ExcalidrawBoardProps) {
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (reloadTrigger == null || reloadTrigger <= 0 || !excalidrawAPIRef.current) return;
+    const api = excalidrawAPIRef.current;
+    // Defer until after paint so Excalidraw's internal _App is mounted
+    let cancelled = false;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (!cancelled) loadScene(api);
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadTrigger, loadScene]);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -119,7 +150,10 @@ export function ExcalidrawBoard({ filePath, className }: ExcalidrawBoardProps) {
           <Excalidraw
             excalidrawAPI={(api) => {
               excalidrawAPIRef.current = api;
-              loadScene(api);
+              // Defer until after paint so Excalidraw's internal _App is mounted
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => loadScene(api));
+              });
             }}
             onChange={(elements, appState, files) => {
               scheduleSave(elements, appState, files);

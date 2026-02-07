@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import {
   readFile,
@@ -9,10 +9,13 @@ import {
   createDirectory,
 } from "@/lib/file-system";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useToolRegistry } from "@/store/use-tool-registry";
+import { useAgentStore } from "@/store/use-agent-store";
 import { FileTree } from "./file-tree";
 import { X, FolderOpen, FolderPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FolderPickerDialog } from "@/components/file-picker";
+import { createCodeEditorTools } from "./tools";
 import { Button } from "@/components/ui/button";
 
 const DEFAULT_DIRECTORY = "/code";
@@ -27,6 +30,14 @@ function dirname(path: string): string {
 
 export function CodeEditorApp({ id, config }: AppProps) {
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
+  const registerTool = useToolRegistry((s) => s.registerTool);
+  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const codeEditorTools = useMemo(() => createCodeEditorTools(id), [id]);
+
+  useEffect(() => {
+    codeEditorTools.forEach((tool) => registerTool(tool));
+    return () => codeEditorTools.forEach((tool) => unregisterTool(tool.name));
+  }, [codeEditorTools, registerTool, unregisterTool]);
   const configDirectory = config?.directoryPath as string | undefined;
   const configFilePath = config?.filePath as string | undefined;
   const directoryPath = configDirectory ?? dirname(configFilePath ?? DEFAULT_DIRECTORY + "/main.js") ?? DEFAULT_DIRECTORY;
@@ -178,7 +189,7 @@ export function CodeEditorApp({ id, config }: AppProps) {
   }
 
   return (
-    <div className="flex h-full font-mono text-sm">
+    <div id={id} className="flex h-full font-mono text-sm">
       <div
         className="shrink-0 flex flex-col border-r border-border bg-muted/30"
         style={{ width: SIDEBAR_WIDTH }}
@@ -290,9 +301,10 @@ export function CodeEditorApp({ id, config }: AppProps) {
             </div>
           )}
         </div>
-        <div className="flex-1 min-h-0 overflow-hidden">
+        <div data-code-editor className="flex-1 min-h-0 overflow-hidden">
           {activeFile ? (
             <textarea
+              data-code-content
               spellCheck={false}
               className="h-full w-full resize-none border-0 bg-background p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-0"
               placeholder="// Start coding..."

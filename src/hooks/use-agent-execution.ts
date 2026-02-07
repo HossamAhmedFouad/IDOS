@@ -9,6 +9,7 @@ import {
   selectActiveWorkspaceConfig,
 } from "@/store/use-workspace-store";
 import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
+import { clearWhiteboardForNewRun } from "@/apps/whiteboard/tools";
 import type { AgentEvent, ToolResult } from "@/lib/types/agent";
 import type { AgentSessionStatus } from "@/lib/types/agent";
 
@@ -89,6 +90,7 @@ export function useAgentExecution() {
   const getToolDefinitionsForAI = useToolRegistry((s) => s.getToolDefinitionsForAI);
   const getAllTools = useToolRegistry((s) => s.getAllTools);
   const startExecution = useAgentStore((s) => s.startExecution);
+  const incrementAgentDataVersion = useAgentStore((s) => s.incrementAgentDataVersion);
   const addEvent = useAgentStore((s) => s.addEvent);
   const completeExecution = useAgentStore((s) => s.completeExecution);
   const createSession = useAgentSessionsStore((s) => s.createSession);
@@ -104,6 +106,8 @@ export function useAgentExecution() {
       const sessionId = createSession(intent);
       setView("agent");
       startExecution(intent);
+      // Clear whiteboard so agent runs start with empty canvas (no old drawings)
+      clearWhiteboardForNewRun().then(() => incrementAgentDataVersion());
 
       const addEventAndSync = (event: AgentEvent) => {
         addEvent(event);

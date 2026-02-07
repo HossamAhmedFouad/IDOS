@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import type { AppProps } from "@/lib/types";
 import {
   listDirectory,
@@ -11,10 +11,12 @@ import {
   createDirectory,
 } from "@/lib/file-system";
 import { useToolRegistry } from "@/store/use-tool-registry";
+import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useAgentStore } from "@/store/use-agent-store";
 import { Folder, File, Trash2, FolderPlus, FilePlus, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { fileBrowserTools } from "./tools";
+import { createFileBrowserTools } from "./tools";
 
 const ROOT = "/";
 const AUTO_SAVE_DELAY_MS = 600;
@@ -25,15 +27,16 @@ interface FileEntry {
   isDir: boolean;
 }
 
-export function FileBrowserApp({ config }: AppProps) {
+export function FileBrowserApp({ id, config }: AppProps) {
   const rootPath = (config?.rootPath as string | undefined) ?? ROOT;
   const registerTool = useToolRegistry((s) => s.registerTool);
   const unregisterTool = useToolRegistry((s) => s.unregisterTool);
+  const fileBrowserTools = useMemo(() => createFileBrowserTools(id), [id]);
 
   useEffect(() => {
     fileBrowserTools.forEach((tool) => registerTool(tool));
     return () => fileBrowserTools.forEach((tool) => unregisterTool(tool.name));
-  }, [registerTool, unregisterTool]);
+  }, [fileBrowserTools, registerTool, unregisterTool]);
 
   const [currentPath, setCurrentPath] = useState(rootPath);
   const [entries, setEntries] = useState<FileEntry[]>([]);
@@ -78,6 +81,14 @@ export function FileBrowserApp({ config }: AppProps) {
   useEffect(() => {
     loadDir(currentPath);
   }, [currentPath, loadDir]);
+
+  const view = useWorkspaceStore((s) => s.view);
+  const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  useEffect(() => {
+    if (view === "agent" && agentDataVersion > 0) {
+      loadDir(currentPath);
+    }
+  }, [view, agentDataVersion, loadDir, currentPath]);
 
   const loadPreview = useCallback(async (path: string) => {
     setPreviewPath(path);
@@ -224,7 +235,7 @@ export function FileBrowserApp({ config }: AppProps) {
     : entries;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div id={id} className="flex h-full flex-col overflow-hidden">
       <div className="shrink-0 border-b border-border bg-muted px-3 py-2">
         <div className="flex flex-wrap items-center gap-1 text-sm">
           {breadcrumbs.map((part, i) => (
@@ -350,10 +361,12 @@ export function FileBrowserApp({ config }: AppProps) {
           {loading ? (
             <div className="p-4 text-sm text-muted-foreground">Loading...</div>
           ) : (
-            <ul className="divide-y divide-border">
+            <ul data-file-list className="divide-y divide-border">
               {filteredEntries.map((e) => (
                 <li
                   key={e.path}
+                  data-folder-path={e.isDir ? e.path : undefined}
+                  data-file-path={!e.isDir ? e.path : undefined}
                   className="flex items-center justify-between gap-2 px-3 py-2 hover:bg-muted"
                 >
                   <button

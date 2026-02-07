@@ -37,6 +37,11 @@ function toolNameToAppId(toolName: string): AppId | null {
   if (toolName.startsWith("todo_")) return "todo";
   if (toolName.startsWith("calendar_")) return "calendar";
   if (toolName.startsWith("file_browser_")) return "file-browser";
+  if (toolName.startsWith("timer_")) return "timer";
+  if (toolName.startsWith("code_editor_")) return "code-editor";
+  if (toolName.startsWith("email_")) return "email";
+  if (toolName.startsWith("whiteboard_")) return "whiteboard";
+  if (toolName.startsWith("quiz_")) return "quiz";
   return null;
 }
 
@@ -195,7 +200,9 @@ export function AgentView() {
     const previewConfig =
       displayedAppId === "notes" && lastCreatedNotePath
         ? { filePath: lastCreatedNotePath }
-        : {};
+        : displayedAppId === "whiteboard"
+          ? { filePath: "/whiteboard/default.json" }
+          : {};
     return { id: `agent-preview-${displayedAppId}`, config: previewConfig };
   }, [displayedAppId, workspace.apps, lastCreatedNotePath]);
 

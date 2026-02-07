@@ -426,6 +426,366 @@
   }
 }
 
+/* ----- Calendar ----- */
+.calendar-event.slide-in-left {
+  opacity: 0;
+  transform: translateX(-30px);
+}
+
+.calendar-event.slide-in-left.slid-in {
+  animation: calendar-slide-in 0.4s ease-out forwards;
+}
+
+.calendar-event.slide-in-right {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.calendar-event.slide-in-right.slid-in {
+  animation: calendar-slide-in-right 0.4s ease-out forwards;
+}
+
+@keyframes calendar-slide-in {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes calendar-slide-in-right {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.calendar-flipping {
+  animation: calendar-flip 0.3s ease-out;
+}
+
+@keyframes calendar-flip {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.calendar-time-block.growing {
+  opacity: 0;
+  height: 0;
+  overflow: hidden;
+  transition: height 0.4s ease-out, opacity 0.3s ease-out;
+}
+
+.calendar-time-block.growing.grown {
+  opacity: 1;
+}
+
+/* ----- Timer ----- */
+.timer-ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, oklch(0.6 0.22 265 / 0.3) 0%, transparent 70%);
+  animation: timer-ripple-expand 1s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes timer-ripple-expand {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+.timer-running {
+  animation: timer-pulse-subtle 2s ease-in-out infinite;
+}
+
+@keyframes timer-pulse-subtle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+.timer-urgent .pulse-urgent {
+  animation: timer-urgent-pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes timer-urgent-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    color: inherit;
+  }
+  50% {
+    transform: scale(1.05);
+    color: oklch(0.7 0.2 25);
+  }
+}
+
+.timer-complete {
+  animation: timer-complete-glow 0.5s ease-out;
+}
+
+@keyframes timer-complete-glow {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.6 0.2 145 / 0.5);
+  }
+  100% {
+    box-shadow: 0 0 20px 5px oklch(0.6 0.2 145 / 0.2);
+  }
+}
+
+.timer-complete-message {
+  margin-top: 8px;
+  font-size: 0.875rem;
+  color: oklch(0.6 0.2 145);
+}
+
+/* ----- Code Editor ----- */
+.code-editor-flash {
+  animation: code-editor-flash 0.3s ease-out;
+}
+
+@keyframes code-editor-flash {
+  0% {
+    background-color: oklch(0.6 0.22 265 / 0.2);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.code-editor-error-shake {
+  animation: code-editor-shake 0.5s ease-in-out;
+}
+
+@keyframes code-editor-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(6px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.line-highlighted {
+  transition: background-color 0.2s ease-out;
+}
+
+/* ----- Email ----- */
+.email-sent-success {
+  animation: email-sent-success 1.5s ease-out;
+}
+
+.email-sent-error {
+  animation: email-sent-error 1.5s ease-out;
+}
+
+@keyframes email-sent-success {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.6 0.2 145 / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px oklch(0.6 0.2 145 / 0.3);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@keyframes email-sent-error {
+  0% {
+    box-shadow: 0 0 0 0 oklch(0.7 0.2 25 / 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px 5px oklch(0.7 0.2 25 / 0.3);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+.email-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: oklch(0.2 0.02 265);
+  font-size: 0.75rem;
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.email-attachment-chip.attachment-added {
+  animation: attachment-pop 0.3s ease-out forwards;
+}
+
+@keyframes attachment-pop {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ----- Whiteboard ----- */
+.whiteboard-shape {
+  position: absolute;
+  border: 2px solid oklch(0.6 0.22 265);
+  pointer-events: none;
+  z-index: 100;
+}
+
+.whiteboard-shape.whiteboard-rectangle {
+  border-radius: 4px;
+}
+
+.whiteboard-shape.whiteboard-circle {
+  border-radius: 50%;
+}
+
+.whiteboard-shape.whiteboard-line,
+.whiteboard-shape.whiteboard-arrow {
+  height: 4px;
+  background: oklch(0.6 0.22 265);
+  border: none;
+}
+
+.whiteboard-shape.whiteboard-arrow::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 50%;
+  border: 6px solid transparent;
+  border-left-color: oklch(0.6 0.22 265);
+  transform: translate(100%, -50%);
+}
+
+.whiteboard-shape-entering {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.whiteboard-shape-entering.whiteboard-shape-entered {
+  animation: whiteboard-shape-in 0.4s ease-out forwards;
+}
+
+@keyframes whiteboard-shape-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.whiteboard-text {
+  position: absolute;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  background: oklch(0.99 0 0 / 0.9);
+  border: 1px solid oklch(0.26 0.03 265);
+  border-radius: 6px;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transform: scale(0.9);
+}
+
+.whiteboard-text-entering.whiteboard-text-entered {
+  animation: whiteboard-text-in 0.3s ease-out forwards;
+}
+
+@keyframes whiteboard-text-in {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.whiteboard-clearing {
+  animation: whiteboard-wipe 0.5s ease-out;
+}
+
+@keyframes whiteboard-wipe {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* ----- File Browser ----- */
+.folder-expanding {
+  animation: folder-expand 0.3s ease-out;
+}
+
+@keyframes folder-expand {
+  0% {
+    transform: scaleY(0.95);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+.folder-expanded,
+.file-highlighted,
+.breadcrumb-highlight {
+  background-color: oklch(0.6 0.22 265 / 0.15);
+  box-shadow: 0 0 0 2px oklch(0.6 0.22 265 / 0.3);
+}
+
+.file-creating {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.file-creating.file-created {
+  animation: file-created 0.4s ease-out forwards;
+}
+
+@keyframes file-created {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.file-moving {
+  transition: transform 0.5s ease-out;
+}
+
 /* Confetti (shared) */
 .confetti-piece {
   position: fixed;

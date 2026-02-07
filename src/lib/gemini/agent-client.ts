@@ -18,6 +18,7 @@ function mapPropertyToSchema(prop: {
   type: string;
   description: string;
   enum?: string[];
+  items?: { type: string };
 }): FunctionDeclarationSchema["properties"][string] {
   if (prop.enum) {
     return {
@@ -36,10 +37,20 @@ function mapPropertyToSchema(prop: {
     array: SchemaType.ARRAY,
   };
   const t = typeMap[prop.type] ?? SchemaType.STRING;
+
+  if (t === SchemaType.ARRAY && prop.items?.type) {
+    const itemType = typeMap[prop.items.type] ?? SchemaType.STRING;
+    return {
+      type: SchemaType.ARRAY,
+      description: prop.description,
+      items: { type: itemType },
+    } as FunctionDeclarationSchema["properties"][string];
+  }
+
   return {
     type: t,
     description: prop.description,
-  };
+  } as FunctionDeclarationSchema["properties"][string];
 }
 
 function toolDefinitionToFunctionDeclaration(
