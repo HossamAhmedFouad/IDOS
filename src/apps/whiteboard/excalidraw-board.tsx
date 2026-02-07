@@ -32,6 +32,7 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   const mountedRef = useRef(true);
+  const loadSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadScene = useCallback(
     async (api: ExcalidrawImperativeAPI) => {
@@ -43,16 +44,18 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
         if (!mountedRef.current) return;
         const elements = scene.elements;
         const appState = scene.appState ?? undefined;
-        // Defer to next macrotask so Excalidraw's internal _App is mounted before updateScene (setState)
+        // Excalidraw's _App must be mounted before updateScene (setState). A short delay is required.
         const runUpdate = () => {
+          loadSceneTimeoutRef.current = null;
           if (!mountedRef.current) return;
           try {
             api.updateScene({ elements, appState });
           } catch {
-            // Excalidraw may not be mounted yet; ignore
+            // ignore
           }
         };
-        setTimeout(runUpdate, 0);
+        if (loadSceneTimeoutRef.current) clearTimeout(loadSceneTimeoutRef.current);
+        loadSceneTimeoutRef.current = setTimeout(runUpdate, 100);
       } catch {
         // File not found or invalid: start with empty scene
       }
@@ -64,6 +67,10 @@ export function ExcalidrawBoard({ filePath, className, reloadTrigger }: Excalidr
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (loadSceneTimeoutRef.current) {
+        clearTimeout(loadSceneTimeoutRef.current);
+        loadSceneTimeoutRef.current = null;
+      }
     };
   }, []);
 

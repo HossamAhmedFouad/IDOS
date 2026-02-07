@@ -547,8 +547,8 @@ export function AgentView() {
                       </div>
                     ))}
                 </div>
-                {/* Loading UI under messages: small strip until first response */}
-                {isViewingLiveRun && isExecuting && (
+                {/* Loading UI: show whenever execution is in progress (e.g. right after Enter) */}
+                {isExecuting && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -566,7 +566,7 @@ export function AgentView() {
                       <>
                         <Loader2 className="size-3.5 shrink-0 animate-spin text-agent-accent-foreground" />
                         <span className="text-sm text-agent-accent-foreground">
-                          {displayHistory.filter((e) => e.type !== "agent-start").length === 0
+                          {executionHistory.filter((e) => e.type !== "agent-start").length === 0
                             ? "Starting…"
                             : "Getting response…"}
                         </span>
@@ -578,7 +578,7 @@ export function AgentView() {
               {/* Chat bar: smaller, fixed under execution list */}
               {hasActiveSession && (
                 <div className="shrink-0 border-t border-border/60 bg-background/60 px-3 py-2">
-                  <div className="mx-auto max-w-2xl">
+                  <div className="mx-auto max-w-4xl w-full">
                     <IntentInput
                       submitIcon={Play}
                       submitLabel="Run"

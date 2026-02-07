@@ -133,6 +133,7 @@ export function IntentInput({
 
       if (onAgentSubmit) {
         onAgentSubmit(text);
+        setIntent("");
         if (!keepLoadingAfterAgentSubmit) setInternalLoading(false);
         return;
       }
