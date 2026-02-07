@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       { status: 404, headers: { "Content-Type": "application/json" } }
     );
   }
+  entry.createdAt = Date.now();
 
   const { chat } = entry;
   const stream = new ReadableStream<Uint8Array>({

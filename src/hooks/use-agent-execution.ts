@@ -177,7 +177,10 @@ export function useAgentExecution() {
           return;
         }
         if (!res.ok) {
-          addEventAndSync({ type: "error", data: { message: `Request failed: ${res.status}` } });
+          const err = await res.json().catch(() => ({ error: `Request failed: ${res.status}` }));
+          const message =
+            (err as { error?: string }).error ?? `Request failed: ${res.status}`;
+          addEventAndSync({ type: "error", data: { message } });
           completeAndSync("error");
           return;
         }
@@ -243,6 +246,7 @@ export function useAgentExecution() {
               body: JSON.stringify({
                 intent,
                 toolDefinitions,
+                sessionId,
               }),
             }));
 
@@ -300,6 +304,14 @@ export function useAgentExecution() {
                 if (result.multipleUpdates?.length)
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
+                if (!apiSessionId) {
+                  addEventAndSync({
+                    type: "error",
+                    data: { message: "Missing session from server; please try again." },
+                  });
+                  completeAndSync("error");
+                  return;
+                }
                 runContinue(apiSessionId, name, result);
               })
               .catch((err) => {

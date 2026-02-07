@@ -26,7 +26,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let body: { intent?: string; toolDefinitions?: ToolDefinitionForAI[] };
+  let body: {
+    intent?: string;
+    toolDefinitions?: ToolDefinitionForAI[];
+    sessionId?: string;
+  };
   try {
     body = await request.json();
   } catch {
@@ -41,6 +45,8 @@ export async function POST(request: NextRequest) {
   const toolDefinitions = Array.isArray(body.toolDefinitions)
     ? body.toolDefinitions
     : [];
+  const clientSessionId =
+    typeof body.sessionId === "string" ? body.sessionId.trim() : "";
 
   if (!intent) {
     return new Response(JSON.stringify({ error: "Missing intent" }), {
@@ -51,7 +57,9 @@ export async function POST(request: NextRequest) {
 
   cleanupSessions();
 
-  const sessionId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  const sessionId =
+    clientSessionId ||
+    `agent-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
