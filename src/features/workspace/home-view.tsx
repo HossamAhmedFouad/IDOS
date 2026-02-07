@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { LayoutGrid, Play, Sparkles } from "lucide-react";
-import { useWorkspaceStore } from "@/store/use-workspace-store";
+import {
+  useWorkspaceStore,
+  selectActiveWorkspaceConfig,
+} from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
@@ -14,7 +17,10 @@ import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
+import { computeLayout } from "./layout-engine";
+import { AppRenderer } from "./app-renderer";
 
+const TOP_BAR_HEIGHT = 48;
 const INTENSITY_THRESHOLD = 12;
 
 const LOADING_MESSAGES = [
@@ -37,6 +43,8 @@ export function HomeView() {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
+  const workspace = useWorkspaceStore(selectActiveWorkspaceConfig);
+  const activeModes = useWorkspaceStore((s) => s.activeModes);
   const backgroundType = usePersonalizationStore((s) => s.backgroundType);
   const particleSystem = usePersonalizationStore((s) => s.particleSystem);
   const particleShape = usePersonalizationStore((s) => s.particleShape);
@@ -63,6 +71,41 @@ export function HomeView() {
   );
   const intentContainerRef = useRef<HTMLDivElement>(null);
   const blobRef = useRef<HTMLDivElement>(null);
+
+  const [viewport, setViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? { width: window.innerWidth, height: window.innerHeight }
+      : { width: 800, height: 600 }
+  );
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  const hasWorkspaceApps =
+    activeWorkspaceId != null && workspace.apps.length > 0;
+  const layoutResult = useMemo(
+    () =>
+      hasWorkspaceApps
+        ? computeLayout(
+            workspace,
+            viewport.width || 800,
+            Math.max(
+              200,
+              (viewport.height || 600) - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX
+            )
+          )
+        : { apps: [] },
+    [hasWorkspaceApps, workspace, viewport.width, viewport.height]
+  );
 
   const handleSuccess = () => {
     setView("workspace");
@@ -233,6 +276,20 @@ export function HomeView() {
           </AnimatePresence>
         </div>
       </div>
+
+      {/* Floating app layer: same as workspace, above intent so windows can be dragged on top */}
+      {layoutResult.apps.length > 0 && (
+        <div
+          className="absolute left-0 right-0 z-30"
+          style={{
+            top: TOP_BAR_HEIGHT,
+            bottom: TASKBAR_HEIGHT_PX,
+            minHeight: `calc(100vh - ${TOP_BAR_HEIGHT}px - ${TASKBAR_HEIGHT_PX}px)`,
+          }}
+        >
+          <AppRenderer layoutResult={layoutResult} activeModes={activeModes} />
+        </div>
+      )}
 
       {/* Taskbar on home too */}
       <Taskbar />

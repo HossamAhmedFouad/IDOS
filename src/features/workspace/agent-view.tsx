@@ -20,6 +20,8 @@ import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IntentInput } from "@/features/intent/intent-input";
+import { computeLayout } from "./layout-engine";
+import { AppRenderer } from "./app-renderer";
 import { cn } from "@/lib/utils";
 import type { AppId } from "@/lib/types";
 import { getAppName } from "@/lib/constants/app-catalog";
@@ -102,6 +104,40 @@ export function AgentView() {
   const executionScrollRef = useRef<HTMLDivElement>(null);
   const [isDraggingSplit, setIsDraggingSplit] = useState(false);
   const [focusedAppIdOverride, setFocusedAppIdOverride] = useState<AppId | null>(null);
+  const [viewport, setViewport] = useState(() =>
+    typeof window !== "undefined"
+      ? { width: window.innerWidth, height: window.innerHeight }
+      : { width: 800, height: 600 }
+  );
+
+  useEffect(() => {
+    const updateViewport = () => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  const hasWorkspaceApps =
+    activeWorkspaceId != null && workspace.apps.length > 0;
+  const layoutResult = useMemo(
+    () =>
+      hasWorkspaceApps
+        ? computeLayout(
+            workspace,
+            viewport.width || 800,
+            Math.max(
+              200,
+              (viewport.height || 600) - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX
+            )
+          )
+        : { apps: [] },
+    [hasWorkspaceApps, workspace, viewport.width, viewport.height]
+  );
 
   const activeSession = agentSessions.find((s) => s.id === activeAgentSessionId);
   const isViewingLiveRun =
@@ -593,6 +629,20 @@ export function AgentView() {
           </div>
         )}
       </div>
+
+      {/* Floating app layer: workspace apps on top of agent UI */}
+      {layoutResult.apps.length > 0 && (
+        <div
+          className="absolute left-0 right-0 z-30"
+          style={{
+            top: TOP_BAR_HEIGHT,
+            bottom: TASKBAR_HEIGHT_PX,
+            minHeight: `calc(100vh - ${TOP_BAR_HEIGHT}px - ${TASKBAR_HEIGHT_PX}px)`,
+          }}
+        >
+          <AppRenderer layoutResult={layoutResult} activeModes={activeModes} />
+        </div>
+      )}
 
       <Taskbar />
     </div>

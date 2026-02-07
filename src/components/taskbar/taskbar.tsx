@@ -8,6 +8,7 @@ import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
   selectMinimizedAppIds,
+  defaultWorkspaceConfig,
 } from "@/store/use-workspace-store";
 import { APP_CATALOG } from "@/lib/constants/app-catalog";
 import { getAppIcon } from "@/lib/constants/app-icons";
@@ -28,6 +29,10 @@ export function Taskbar() {
   const view = useWorkspaceStore((s) => s.view);
   const workspace = useWorkspaceStore(selectActiveWorkspaceConfig);
   const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
+  const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
+  const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
+  const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
 
   const openAppTypes = new Set(
     workspace.apps.filter((a) => !minimizedAppIds.includes(a.id)).map((a) => a.type)
@@ -62,6 +67,18 @@ export function Taskbar() {
     );
   }, [search]);
 
+  const ensureWorkspaceForAdd = () => {
+    if (view === "home" && workspaces.length === 0) {
+      createWorkspace(defaultWorkspaceConfig, "New workspace");
+    } else if (view === "agent") {
+      if (workspaces.length === 0) {
+        createWorkspace(defaultWorkspaceConfig, "New workspace");
+      } else if (activeWorkspaceId === null) {
+        setActiveWorkspace(workspaces[0].id);
+      }
+    }
+  };
+
   const handleAppClick = (appId: AppId) => {
     const minimizedOfType = workspace.apps.filter(
       (a) => a.type === appId && minimizedAppIds.includes(a.id)
@@ -69,16 +86,18 @@ export function Taskbar() {
     if (minimizedOfType.length > 0) {
       setMinimized(minimizedOfType[0].id, false);
     } else {
+      ensureWorkspaceForAdd();
       addApp(appId);
     }
-    if (view === "home") {
-      setView("workspace");
-    }
+    // Do not switch to workspace when opening/restoring app on home or agent
   };
 
   const handlePickerSelect = (appId: AppId) => {
+    ensureWorkspaceForAdd();
     addApp(appId);
-    if (view === "home") setView("workspace");
+    if (view !== "home" && view !== "agent") {
+      // Only switch when not on home/agent (e.g. if we ever add other views)
+    }
     setPickerOpen(false);
     setSearch("");
   };
