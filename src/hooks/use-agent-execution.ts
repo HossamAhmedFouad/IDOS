@@ -4,7 +4,11 @@ import { useCallback } from "react";
 import { useToolRegistry } from "@/store/use-tool-registry";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentSessionsStore } from "@/store/use-agent-sessions-store";
-import { useWorkspaceStore } from "@/store/use-workspace-store";
+import {
+  useWorkspaceStore,
+  selectActiveWorkspaceConfig,
+} from "@/store/use-workspace-store";
+import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
 import type { AgentEvent, ToolResult } from "@/lib/types/agent";
 import type { AgentSessionStatus } from "@/lib/types/agent";
 
@@ -62,6 +66,23 @@ function eventTypeToStatus(eventType: string): AgentSessionStatus {
   if (eventType === "agent-timeout") return "timeout";
   if (eventType === "error") return "error";
   return "completed";
+}
+
+/** When the agent creates a note, ensure the Notes app has that file path so it loads when shown (workspace + agent store for preview). */
+function syncCreatedNotePathToWorkspace(toolName: string, result: ToolResult): void {
+  if (toolName !== "notes_create_note" || !result.success || !result.data) return;
+  const data = result.data as { path?: string };
+  const path = typeof data.path === "string" ? data.path : undefined;
+  if (!path) return;
+  useAgentStore.getState().setLastCreatedNotePath(path);
+  const state = useWorkspaceStore.getState();
+  const config = selectActiveWorkspaceConfig(state);
+  const notesApp = config.apps.find((a) => a.type === "notes");
+  if (notesApp) {
+    state.updateAppConfig(notesApp.id, { filePath: path });
+  } else {
+    state.addApp("notes", { filePath: path });
+  }
 }
 
 export function useAgentExecution() {
@@ -165,6 +186,10 @@ export function useAgentExecution() {
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
+                if (result.uiUpdate) void uiUpdateExecutor.execute(result.uiUpdate);
+                if (result.multipleUpdates?.length)
+                  void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
+                syncCreatedNotePathToWorkspace(name, result);
                 runContinue(sessionId, name, result);
               })
               .catch((err) => {
@@ -238,6 +263,10 @@ export function useAgentExecution() {
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
+                if (result.uiUpdate) void uiUpdateExecutor.execute(result.uiUpdate);
+                if (result.multipleUpdates?.length)
+                  void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
+                syncCreatedNotePathToWorkspace(name, result);
                 runContinue(apiSessionId, name, result);
               })
               .catch((err) => {

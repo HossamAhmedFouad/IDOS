@@ -2,14 +2,14 @@
  * Agent control types: tool definitions, results, and execution events.
  */
 
+import type { AppSpecificUIUpdate } from "./uiUpdates";
+
 export interface ToolResult {
   success: boolean;
   data?: unknown;
   error?: string;
-  uiUpdate?: {
-    type: "highlight" | "scroll" | "flash";
-    targetId: string;
-  };
+  uiUpdate?: AppSpecificUIUpdate;
+  multipleUpdates?: AppSpecificUIUpdate[];
 }
 
 export interface AppToolParameters {

@@ -59,10 +59,19 @@ export function createTodoTools(appInstanceId: string): AppTool[] {
         };
         taskList.push(newTask);
         await writeFile(DEFAULT_PATH, JSON.stringify(taskList, null, 2));
+        const priority = (params.priority as "low" | "medium" | "high") || "medium";
         return {
           success: true,
           data: newTask,
-          uiUpdate: { type: "scroll", targetId: "todo-list-bottom" },
+          uiUpdate: {
+            type: "todo_task_pop_in",
+            targetId: `${appInstanceId}-list`,
+            taskData: {
+              title: newTask.text,
+              priority,
+              position: taskList.length - 1,
+            },
+          },
         };
       },
     },
@@ -94,7 +103,13 @@ export function createTodoTools(appInstanceId: string): AppTool[] {
         return {
           success: true,
           data: task,
-          uiUpdate: { type: "highlight", targetId: taskId },
+          uiUpdate: {
+            type: "todo_check_animation",
+            targetId: appInstanceId,
+            taskId,
+            strikethrough: true,
+            confetti: true,
+          },
         };
       },
     },

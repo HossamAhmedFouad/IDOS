@@ -142,7 +142,7 @@ export function NotesApp({ id, config }: AppProps) {
   }
 
   return (
-    <div className="flex h-full flex-col p-4">
+    <div id={id} className="flex h-full flex-col p-4">
       <div className="mb-2 flex shrink-0 items-center gap-2 border-b border-border pb-2">
         <Button
           type="button"
@@ -176,13 +176,15 @@ export function NotesApp({ id, config }: AppProps) {
       {saving && (
         <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
-      <textarea
-        className="h-full min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        placeholder="Start typing..."
-        value={content}
-        onChange={handleChange}
-        onBlur={handleBlur}
-      />
+      <div data-note-content className="flex min-h-0 flex-1 flex-col">
+        <textarea
+          className="h-full min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          placeholder="Start typing..."
+          value={content}
+          onChange={handleChange}
+          onBlur={handleBlur}
+        />
+      </div>
       <FilePickerDialog
         open={saveAsOpen}
         onOpenChange={setSaveAsOpen}

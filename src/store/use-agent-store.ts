@@ -22,6 +22,8 @@ interface AgentState {
   homeAgentMode: boolean;
   /** Bumped on each tool-result so file-based apps can refetch when on Agent view. */
   agentDataVersion: number;
+  /** Last note path created by agent (so Notes app in agent preview can load it when navigating back). */
+  lastCreatedNotePath: string | null;
 
   startExecution: (intent: string) => void;
   addEvent: (event: AgentEvent) => void;
@@ -31,6 +33,7 @@ interface AgentState {
   openAgentRunDialog: () => void;
   closeAgentRunDialog: () => void;
   setHomeAgentMode: (v: boolean) => void;
+  setLastCreatedNotePath: (path: string | null) => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
@@ -43,6 +46,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   agentRunDialogOpen: false,
   homeAgentMode: false,
   agentDataVersion: 0,
+  lastCreatedNotePath: null,
 
   startExecution: (intent) =>
     set({
@@ -84,4 +88,5 @@ export const useAgentStore = create<AgentState>((set) => ({
   openAgentRunDialog: () => set({ agentRunDialogOpen: true }),
   closeAgentRunDialog: () => set({ agentRunDialogOpen: false }),
   setHomeAgentMode: (v) => set({ homeAgentMode: v }),
+  setLastCreatedNotePath: (path) => set({ lastCreatedNotePath: path }),
 }));

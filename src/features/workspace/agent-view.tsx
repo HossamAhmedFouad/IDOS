@@ -24,6 +24,8 @@ import { cn } from "@/lib/utils";
 import type { AppId } from "@/lib/types";
 import { getAppName } from "@/lib/constants/app-catalog";
 import { getAppComponent } from "@/apps/registry";
+import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
+import type { AppSpecificUIUpdate } from "@/lib/types/uiUpdates";
 import { Suspense } from "react";
 
 const TOP_BAR_HEIGHT = 48;
@@ -35,6 +37,18 @@ function toolNameToAppId(toolName: string): AppId | null {
   if (toolName.startsWith("todo_")) return "todo";
   if (toolName.startsWith("calendar_")) return "calendar";
   if (toolName.startsWith("file_browser_")) return "file-browser";
+  return null;
+}
+
+function uiUpdateTypeToAppId(type: string): AppId | null {
+  if (type.startsWith("notes_")) return "notes";
+  if (type.startsWith("todo_")) return "todo";
+  if (type.startsWith("calendar_")) return "calendar";
+  if (type.startsWith("timer_")) return "timer";
+  if (type.startsWith("file_browser_")) return "file-browser";
+  if (type.startsWith("code_editor_")) return "code-editor";
+  if (type.startsWith("whiteboard_")) return "whiteboard";
+  if (type.startsWith("email_")) return "email";
   return null;
 }
 
@@ -72,6 +86,7 @@ export function AgentView() {
   const currentIntent = useAgentStore((s) => s.currentIntent);
   const executionHistory = useAgentStore((s) => s.executionHistory);
   const streamingThinking = useAgentStore((s) => s.streamingThinking);
+  const lastCreatedNotePath = useAgentStore((s) => s.lastCreatedNotePath);
 
   const { executeIntent } = useAgentExecution();
 
@@ -137,6 +152,21 @@ export function AgentView() {
     setFocusedAppIdOverride(null);
   }, [activeAgentSessionId]);
 
+  // When a queued UI update finishes, switch to the app that has the next update so it is visible
+  useEffect(() => {
+    const onBeforeNextUpdate = (nextUpdate: AppSpecificUIUpdate) => {
+      const appId = uiUpdateTypeToAppId(nextUpdate.type);
+      if (appId) setFocusedAppIdOverride(appId);
+      return new Promise<void>((resolve) => {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => resolve());
+        });
+      });
+    };
+    uiUpdateExecutor.setOnBeforeNextUpdate(onBeforeNextUpdate);
+    return () => uiUpdateExecutor.setOnBeforeNextUpdate(null);
+  }, []);
+
   // Affected apps: unique app IDs in order of first appearance in execution
   const affectedAppIds = useMemo(() => {
     const seen = new Set<AppId>();
@@ -154,32 +184,20 @@ export function AgentView() {
     return result;
   }, [displayHistory]);
 
-  // Last executed app (most recent tool in history)
-  const activeAppId = useMemo(() => {
-    for (let i = displayHistory.length - 1; i >= 0; i--) {
-      const e = displayHistory[i];
-      const toolName =
-        e.type === "tool-call" || e.type === "tool-result"
-          ? (e.data?.toolName as string | undefined)
-          : undefined;
-      if (toolName) {
-        const appId = toolNameToAppId(toolName);
-        if (appId) return appId;
-      }
-    }
-    return null;
-  }, [displayHistory]);
+  // App shown in left pane: user-selected or first affected (do not auto-switch on new tool so UI updates are not interrupted)
+  const displayedAppId = focusedAppIdOverride ?? affectedAppIds[0] ?? null;
 
-  // App shown in left pane: user-selected or last executed
-  const displayedAppId = focusedAppIdOverride ?? activeAppId;
-
-  // Instance id and config for the displayed app
+  // Instance id and config for the displayed app (use lastCreatedNotePath for notes preview so content persists when navigating)
   const displayedAppInstance = useMemo(() => {
     if (!displayedAppId) return null;
     const match = workspace.apps?.find((app) => app.type === displayedAppId);
     if (match) return { id: match.id, config: match.config };
-    return { id: `agent-preview-${displayedAppId}`, config: {} };
-  }, [displayedAppId, workspace.apps]);
+    const previewConfig =
+      displayedAppId === "notes" && lastCreatedNotePath
+        ? { filePath: lastCreatedNotePath }
+        : {};
+    return { id: `agent-preview-${displayedAppId}`, config: previewConfig };
+  }, [displayedAppId, workspace.apps, lastCreatedNotePath]);
 
   // Resizable split: drag to update ratio
   const handleSplitPointerDown = useCallback((e: React.PointerEvent) => {
@@ -452,7 +470,7 @@ export function AgentView() {
                             activeModes,
                             config: displayedAppInstance.config,
                           };
-                          return <Component {...appProps} />;
+                          return <Component key={displayedAppInstance.id} {...appProps} />;
                         })()}
                       </Suspense>
                     </div>

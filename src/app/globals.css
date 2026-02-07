@@ -264,3 +264,173 @@
     opacity: 0.6;
   }
 }
+
+/* Agent UI Update Animations (enhanced tool execution) */
+
+/* ----- Notes ----- */
+.typing-cursor::after {
+  content: "|";
+  animation: cursor-blink 1s infinite;
+  margin-left: 2px;
+}
+
+@keyframes cursor-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  51%,
+  100% {
+    opacity: 0;
+  }
+}
+
+.agent-appended-content {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    oklch(0.6 0.22 265 / 0.2),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: append-highlight 2s ease-out;
+}
+
+@keyframes append-highlight {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.file-create-animation {
+  position: fixed;
+  z-index: 9999;
+  transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}
+
+.file-created-pulse {
+  animation: file-pulse 1s ease-out;
+}
+
+@keyframes file-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 oklch(0.6 0.22 265 / 0.7);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px oklch(0.6 0.22 265 / 0);
+  }
+}
+
+.search-match-highlight {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    oklch(0.75 0.15 85 / 0.4) 25%,
+    oklch(0.75 0.15 85 / 0.4) 75%,
+    transparent 100%
+  );
+  animation: search-sweep 0.6s ease-out;
+}
+
+@keyframes search-sweep {
+  from {
+    background-position: -100% 0;
+  }
+  to {
+    background-position: 100% 0;
+  }
+}
+
+/* ----- Todo ----- */
+.todo-task.task-pop-in {
+  opacity: 0;
+  transform: scale(0.8) translateY(-20px);
+}
+
+.todo-task.task-pop-in.popped-in {
+  animation: pop-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+}
+
+@keyframes pop-in {
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.task-checkbox.checking {
+  animation: checkbox-check 0.3s ease-out;
+}
+
+@keyframes checkbox-check {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.task-checkbox.checked::after {
+  content: "✓";
+  color: oklch(0.65 0.2 160);
+  font-weight: bold;
+  animation: checkmark-appear 0.3s ease-out;
+}
+
+@keyframes checkmark-appear {
+  from {
+    opacity: 0;
+    transform: scale(0) rotate(-45deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.task-completing {
+  animation: task-strikethrough 0.4s ease-out forwards;
+}
+
+@keyframes task-strikethrough {
+  to {
+    opacity: 0.5;
+    text-decoration: line-through;
+    transform: translateX(10px);
+  }
+}
+
+.priority-pulse-high {
+  animation: priority-pulse-high 1s ease-out;
+}
+
+@keyframes priority-pulse-high {
+  0%,
+  100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: oklch(0.6 0.2 25 / 0.3);
+    box-shadow: 0 0 20px oklch(0.6 0.2 25 / 0.5);
+  }
+}
+
+/* Confetti (shared) */
+.confetti-piece {
+  position: fixed;
+  width: 10px;
+  height: 10px;
+  transition: all 1s cubic-bezier(0.34, 1.56, 0.64, 1);
+  pointer-events: none;
+}

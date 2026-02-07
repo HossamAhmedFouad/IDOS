@@ -19,17 +19,37 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
         properties: {
           filename: { type: "string", description: "Note filename (e.g. 'meeting.txt')" },
           content: { type: "string", description: "Note content" },
+          animated: {
+            type: "boolean",
+            description:
+              "Use typewriter effect so the user sees content being written (default: true for better UX)",
+          },
         },
         required: ["filename", "content"],
       },
       execute: async (params) => {
         const filename = String(params.filename ?? "").trim() || "note.txt";
+        const content = String(params.content ?? "");
         const path = `${NOTES_PREFIX}/${filename}`;
-        await writeFile(path, String(params.content ?? ""));
+        await writeFile(path, content);
+        const animated = params.animated !== false;
         return {
           success: true,
           data: { path },
-          uiUpdate: { type: "flash", targetId: appInstanceId },
+          uiUpdate: animated
+            ? {
+                type: "notes_typewriter",
+                targetId: appInstanceId,
+                content,
+                speed: 35,
+                cursor: true,
+              }
+            : {
+                type: "notes_file_create_animation",
+                targetId: appInstanceId,
+                filename,
+                position: { x: typeof window !== "undefined" ? window.innerWidth / 2 : 0, y: 100 },
+              },
         };
       },
     },
@@ -50,7 +70,7 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
           return { success: true, data: { matches: [] } };
         }
         const names = await listDirectory(NOTES_PREFIX);
-        const matches: { path: string; snippet: string }[] = [];
+        const matches: { path: string; snippet: string; line: number; text: string }[] = [];
         for (const name of names) {
           const path = `${NOTES_PREFIX}/${name}`;
           try {
@@ -59,13 +79,27 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
               const idx = content.toLowerCase().indexOf(query);
               const start = Math.max(0, idx - 30);
               const end = Math.min(content.length, idx + query.length + 50);
-              matches.push({ path, snippet: content.slice(start, end) });
+              const snippet = content.slice(start, end);
+              const line = content.slice(0, idx).split("\n").length;
+              matches.push({ path, snippet, line, text: snippet });
             }
           } catch {
             // skip unreadable
           }
         }
-        return { success: true, data: { matches } };
+        return {
+          success: true,
+          data: { matches: matches.map((m) => ({ path: m.path, snippet: m.snippet })) },
+          uiUpdate:
+            matches.length > 0
+              ? {
+                  type: "notes_search_highlight",
+                  targetId: appInstanceId,
+                  matches: matches.map((m) => ({ line: m.line, text: m.text })),
+                  scrollToFirst: true,
+                }
+              : undefined,
+        };
       },
     },
     {
@@ -94,7 +128,12 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
         return {
           success: true,
           data: { path },
-          uiUpdate: { type: "flash", targetId: appInstanceId },
+          uiUpdate: {
+            type: "notes_append_scroll",
+            targetId: appInstanceId,
+            content,
+            highlight: true,
+          },
         };
       },
     },

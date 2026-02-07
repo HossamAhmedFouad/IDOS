@@ -43,27 +43,28 @@ export function TodoApp({ id, config }: AppProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const loadTasks = useCallback(async () => {
-    setLoading(true);
+  const loadTasks = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const text = await readFile(filePath);
       setTasks(loadTasksFromJson(text));
     } catch {
       setTasks([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [filePath]);
 
   useEffect(() => {
-    loadTasks();
+    loadTasks(false);
   }, [loadTasks]);
 
   const view = useWorkspaceStore((s) => s.view);
   const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
   useEffect(() => {
     if (view === "agent" && agentDataVersion > 0) {
-      loadTasks();
+      // Silent reload when agent modifies data - avoids full "Loading..." re-render
+      loadTasks(true);
     }
   }, [view, agentDataVersion, loadTasks]);
 
@@ -113,7 +114,7 @@ export function TodoApp({ id, config }: AppProps) {
   }
 
   return (
-    <div className="flex h-full flex-col p-4">
+    <div id={id} className="flex h-full flex-col p-4">
       <div className="mb-4 flex gap-2">
         <Input
           value={input}
@@ -129,19 +130,22 @@ export function TodoApp({ id, config }: AppProps) {
       {saving && (
         <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
-      <ul className="flex-1 space-y-2 overflow-auto">
+      <ul id={`${id}-list`} data-task-list className="flex-1 space-y-2 overflow-auto">
         {tasks.map((task) => (
           <li
             id={task.id}
+            data-task-id={task.id}
             key={task.id}
             className="flex items-center gap-2 rounded border border-border bg-muted px-3 py-2"
           >
-            <input
-              type="checkbox"
-              checked={task.done}
-              onChange={() => toggleTask(task.id)}
-              className="h-4 w-4 rounded border-border"
-            />
+            <span className="task-checkbox inline-flex items-center">
+              <input
+                type="checkbox"
+                checked={task.done}
+                onChange={() => toggleTask(task.id)}
+                className="h-4 w-4 rounded border-border"
+              />
+            </span>
             <span
               className={`flex-1 text-sm ${
                 task.done ? "text-muted-foreground line-through" : "text-foreground"
@@ -158,7 +162,7 @@ export function TodoApp({ id, config }: AppProps) {
             </button>
           </li>
         ))}
-        <li id="todo-list-bottom" className="h-0 overflow-hidden" aria-hidden />
+        <li key="todo-list-bottom" id="todo-list-bottom" className="h-0 overflow-hidden" aria-hidden />
       </ul>
     </div>
   );
