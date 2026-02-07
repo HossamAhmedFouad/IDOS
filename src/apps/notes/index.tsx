@@ -8,8 +8,13 @@ import { useAgentStore } from "@/store/use-agent-store";
 import { useToolRegistry } from "@/store/use-tool-registry";
 import { FilePickerDialog } from "@/components/file-picker";
 import { Button } from "@/components/ui/button";
-import { FolderOpen, FileDown } from "lucide-react";
+import { FolderOpen, FileDown, FileText, Eye } from "lucide-react";
+import { MarkdownContent } from "@/components/markdown-content";
 import { createNotesTools } from "./tools";
+
+function isMdFile(path: string | undefined): boolean {
+  return Boolean(path?.toLowerCase().endsWith(".md"));
+}
 
 export function NotesApp({ id, config }: AppProps) {
   const filePath = config?.filePath as string | undefined;
@@ -33,7 +38,9 @@ export function NotesApp({ id, config }: AppProps) {
   const [error, setError] = useState<string | null>(null);
   const [saveAsOpen, setSaveAsOpen] = useState(false);
   const [loadOpen, setLoadOpen] = useState(false);
+  const [mdViewMode, setMdViewMode] = useState<"edit" | "preview">("preview");
   const contentRef = useRef(content);
+  const isMd = isMdFile(filePath);
   contentRef.current = content;
 
   const loadContent = useCallback(async (path: string) => {
@@ -164,6 +171,28 @@ export function NotesApp({ id, config }: AppProps) {
           <FileDown className="size-4 mr-1" />
           Save As
         </Button>
+        {isMd && (
+          <>
+            <Button
+              type="button"
+              variant={mdViewMode === "edit" ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setMdViewMode("edit")}
+            >
+              <FileText className="size-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              type="button"
+              variant={mdViewMode === "preview" ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setMdViewMode("preview")}
+            >
+              <Eye className="size-4 mr-1" />
+              Preview
+            </Button>
+          </>
+        )}
         <span className="ml-2 truncate text-xs text-muted-foreground" title={filePath ?? ""}>
           {filePath ?? "New note"}
         </span>
@@ -176,14 +205,20 @@ export function NotesApp({ id, config }: AppProps) {
       {saving && (
         <div className="mb-2 text-xs text-muted-foreground">Saving...</div>
       )}
-      <div data-note-content className="flex min-h-0 flex-1 flex-col">
-        <textarea
-          className="h-full min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder="Start typing..."
-          value={content}
-          onChange={handleChange}
-          onBlur={handleBlur}
-        />
+      <div data-note-content className="flex min-h-0 flex-1 flex-col overflow-auto">
+        {isMd && mdViewMode === "preview" ? (
+          <div className="p-3">
+            <MarkdownContent content={content} />
+          </div>
+        ) : (
+          <textarea
+            className="h-full min-h-0 flex-1 resize-none rounded-md border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            placeholder="Start typing..."
+            value={content}
+            onChange={handleChange}
+            onBlur={handleBlur}
+          />
+        )}
       </div>
       <FilePickerDialog
         open={saveAsOpen}
