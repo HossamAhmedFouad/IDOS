@@ -13,6 +13,7 @@ import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star, Sparkles } from "lucide-react";
@@ -148,9 +149,10 @@ export function WorkspaceView() {
         particleSystem={particleSystem}
         particleShape={particleShape}
       />
-      {/* Thin top bar: Home, Workspace switcher, Clear, Dark toggle */}
+      {/* Thin top bar: Fullscreen, Home, Workspace switcher, Clear, Dark toggle */}
       <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
         <div className="flex min-w-0 shrink items-center gap-2">
+          <FullscreenButton />
           <Button
             type="button"
             variant="ghost"

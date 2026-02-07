@@ -17,6 +17,7 @@ import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { IntentInput } from "@/features/intent/intent-input";
@@ -286,6 +287,7 @@ export function AgentView() {
 
       <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
         <div className="flex min-w-0 shrink items-center gap-2">
+          <FullscreenButton />
           <Button
             type="button"
             variant="ghost"

@@ -16,6 +16,7 @@ import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import { computeLayout } from "./layout-engine";
 import { AppRenderer } from "./app-renderer";
@@ -165,8 +166,10 @@ export function HomeView() {
         particleShape={particleShape}
       />
 
-      {/* Top bar: Workspace, Agent */}
-      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-end gap-2 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+      {/* Top bar: Fullscreen, Workspace, Agent */}
+      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+        <FullscreenButton />
+        <div className="flex items-center gap-2">
         <Button
           type="button"
           variant="ghost"
@@ -200,6 +203,7 @@ export function HomeView() {
           <Sparkles className="size-4" />
           Agent
         </Button>
+        </div>
       </div>
 
       {/* Chat / intent area centered, above taskbar */}
