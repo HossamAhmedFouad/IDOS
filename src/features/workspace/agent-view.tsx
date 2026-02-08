@@ -6,6 +6,7 @@ import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star, GripVerti
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
+  selectMinimizedAppIds,
 } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
@@ -148,6 +149,11 @@ export function AgentView() {
         : { apps: [] },
     [hasWorkspaceApps, workspace, viewport.width, viewport.height]
   );
+
+  const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
+  const allAppsMinimized =
+    layoutResult.apps.length > 0 &&
+    layoutResult.apps.every((app) => minimizedAppIds.includes(app.id));
 
   const activeSession = agentSessions.find((s) => s.id === activeAgentSessionId);
   const isViewingLiveRun =
@@ -322,7 +328,7 @@ export function AgentView() {
         particleShape={particleShape}
       />
 
-      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
         <div className="flex min-w-0 shrink items-center gap-2">
           <FullscreenButton />
           <Button
@@ -465,10 +471,12 @@ export function AgentView() {
         </div>
       </div>
 
+      {/* Agent content below app layer (z-20) so open apps block interaction; passthrough when all minimized */}
       <div
-        className="absolute left-0 right-0 bottom-0 z-20 flex flex-col overflow-hidden"
+        className="absolute left-0 right-0 bottom-0 z-20 pointer-events-none flex flex-col overflow-hidden"
         style={{ top: TOP_BAR_HEIGHT, bottom: TASKBAR_HEIGHT_PX }}
       >
+        <div className="flex flex-1 flex-col min-h-0 w-full overflow-hidden pointer-events-auto">
         {noSessions ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
             <h2 className="text-xl font-medium text-muted-foreground">
@@ -711,12 +719,16 @@ export function AgentView() {
             </div>
           </div>
         )}
+        </div>
       </div>
 
-      {/* Floating app layer: workspace apps on top of agent UI */}
+      {/* Floating app layer: z-30 above agent UI (z-20) so open apps block top bar and content; passthrough when all minimized */}
       {layoutResult.apps.length > 0 && (
         <div
-          className="absolute left-0 right-0 z-30"
+          className={cn(
+            "absolute left-0 right-0 z-30",
+            allAppsMinimized && "pointer-events-none"
+          )}
           style={{
             top: TOP_BAR_HEIGHT,
             bottom: TASKBAR_HEIGHT_PX,
