@@ -14,6 +14,20 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
     return null;
   }
 
+  if (event.type === "user-message") {
+    const d = event.data as { message?: string };
+    return (
+      <div className="rounded-lg border border-primary/40 bg-primary/10 p-3">
+        <div className="mb-1 text-xs font-medium text-primary">
+          Message
+        </div>
+        <div className="text-sm text-foreground">
+          <AgentCardBody text={d.message ?? ""} />
+        </div>
+      </div>
+    );
+  }
+
   if (event.type === "tool-call") {
     const d = event.data as { toolName?: string; thinking?: string };
     return (

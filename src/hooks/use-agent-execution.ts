@@ -165,16 +165,20 @@ export function useAgentExecution() {
       if (continueInSession && existingSession?.executionHistory?.length) {
         setExecutionHistory(existingSession.executionHistory);
       }
-      if (!continueInSession) {
-        // Clear whiteboard so new agent runs start with empty canvas
-        clearWhiteboardForNewRun().then(() => incrementAgentDataVersion());
-      }
 
       const addEventAndSync = (event: AgentEvent) => {
         addEvent(event);
         const history = useAgentStore.getState().executionHistory;
         updateSession(sessionId, { executionHistory: history });
       };
+
+      if (continueInSession) {
+        addEventAndSync({ type: "user-message", data: { message: intent } });
+      }
+      if (!continueInSession) {
+        // Clear whiteboard so new agent runs start with empty canvas
+        clearWhiteboardForNewRun().then(() => incrementAgentDataVersion());
+      }
 
       const completeAndSync = (eventType: string) => {
         const history = useAgentStore.getState().executionHistory;

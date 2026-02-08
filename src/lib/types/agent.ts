@@ -44,6 +44,7 @@ export interface ToolDefinitionForAI {
 
 export type AgentEventType =
   | "agent-start"
+  | "user-message"
   | "tool-call"
   | "tool-result"
   | "agent-complete"

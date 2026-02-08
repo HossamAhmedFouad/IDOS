@@ -581,14 +581,25 @@ export function AgentView() {
                 <div className="space-y-3">
                   {displayHistory
                     .filter((e) => e.type !== "agent-start")
-                    .map((event, idx) => (
-                      <div key={idx} className="flex gap-2">
-                        <span className="shrink-0 mt-0.5 text-xs font-mono text-muted-foreground tabular-nums">
-                          {idx + 1}.
-                        </span>
-                        <AgentEventCard event={event} />
-                      </div>
-                    ))}
+                    .map((event, idx) =>
+                      event.type === "user-message" ? (
+                        <div key={idx} className="flex justify-end">
+                          <div className="max-w-[85%]">
+                            <AgentEventCard event={event} />
+                          </div>
+                        </div>
+                      ) : (
+                        <div key={idx} className="flex gap-2">
+                          <span className="shrink-0 mt-0.5 text-xs font-mono text-muted-foreground tabular-nums">
+                            {displayHistory
+                              .filter((e) => e.type !== "agent-start" && e.type !== "user-message")
+                              .indexOf(event) + 1}
+                            .
+                          </span>
+                          <AgentEventCard event={event} />
+                        </div>
+                      )
+                    )}
                 </div>
                 {/* Loading UI: show whenever execution is in progress (e.g. right after Enter) */}
                 {isExecuting && (
