@@ -14,10 +14,11 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { to, subject, text, fromName } = body as {
+    const { to, subject, text, html, fromName } = body as {
       to?: string;
       subject?: string;
       text?: string;
+      html?: string;
       fromName?: string;
     };
 
@@ -28,16 +29,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const from = process.env.RESEND_FROM_EMAIL ?? "onboarding@resend.dev";
+    const from = process.env.RESEND_FROM_EMAIL ?? "no-reply@mail.idos.website";
     const fromDisplay = fromName?.trim()
       ? `${fromName.trim()} <${from}>`
       : from;
 
+    const textContent = typeof text === "string" ? text.trim() || "" : "";
+    const htmlContent = typeof html === "string" && html.trim() ? html.trim() : undefined;
     const { data, error } = await resend.emails.send({
       from: fromDisplay,
       to: to.trim(),
       subject: typeof subject === "string" ? subject.trim() || "(No subject)" : "(No subject)",
-      text: typeof text === "string" ? text.trim() || "" : "",
+      text: textContent,
+      ...(htmlContent !== undefined && { html: htmlContent }),
     });
 
     if (error) {

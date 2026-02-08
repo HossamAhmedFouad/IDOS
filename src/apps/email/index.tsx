@@ -14,6 +14,7 @@ interface Draft {
   to: string;
   subject: string;
   body: string;
+  html?: string;
 }
 
 function parseDraft(json: string): Draft {
@@ -23,6 +24,7 @@ function parseDraft(json: string): Draft {
       to: typeof data?.to === "string" ? data.to : "",
       subject: typeof data?.subject === "string" ? data.subject : "",
       body: typeof data?.body === "string" ? data.body : "",
+      html: typeof data?.html === "string" ? data.html : undefined,
     };
   } catch {
     return { to: "", subject: "", body: "" };
@@ -41,6 +43,7 @@ export function EmailApp({ id, config }: AppProps) {
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [html, setHtml] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
@@ -55,10 +58,12 @@ export function EmailApp({ id, config }: AppProps) {
       setTo(draft.to);
       setSubject(draft.subject);
       setBody(draft.body);
+      setHtml(draft.html ?? "");
     } catch {
       setTo("");
       setSubject("");
       setBody("");
+      setHtml("");
     } finally {
       setLoading(false);
     }
@@ -81,12 +86,12 @@ export function EmailApp({ id, config }: AppProps) {
     try {
       await writeFile(
         filePath,
-        JSON.stringify({ to, subject, body }, null, 2)
+        JSON.stringify({ to, subject, body, html }, null, 2)
       );
     } finally {
       setSaving(false);
     }
-  }, [filePath, to, subject, body]);
+  }, [filePath, to, subject, body, html]);
 
   const handleSend = useCallback(async () => {
     if (!to.trim()) {
@@ -98,14 +103,16 @@ export function EmailApp({ id, config }: AppProps) {
     setSendStatus("idle");
     setSendError("");
     try {
+      const payload: { to: string; subject: string; text: string; html?: string } = {
+        to: to.trim(),
+        subject: subject.trim(),
+        text: body.trim(),
+      };
+      if (html.trim()) payload.html = html.trim();
       const res = await fetch("/api/send-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: to.trim(),
-          subject: subject.trim(),
-          text: body.trim(),
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -117,7 +124,7 @@ export function EmailApp({ id, config }: AppProps) {
     } finally {
       setSending(false);
     }
-  }, [to, subject, body]);
+  }, [to, subject, body, html]);
 
   const handleBlur = useCallback(() => {
     saveDraft();

@@ -9,6 +9,7 @@ interface Draft {
   to: string;
   subject: string;
   body: string;
+  html?: string;
 }
 
 function parseDraft(json: string): Draft {
@@ -18,6 +19,7 @@ function parseDraft(json: string): Draft {
       to: typeof data?.to === "string" ? data.to : "",
       subject: typeof data?.subject === "string" ? data.subject : "",
       body: typeof data?.body === "string" ? data.body : "",
+      html: typeof data?.html === "string" ? data.html : undefined,
     };
   } catch {
     return { to: "", subject: "", body: "" };
@@ -39,6 +41,10 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
           to: { type: "string", description: "Recipient email address" },
           subject: { type: "string", description: "Email subject" },
           body: { type: "string", description: "Email body content" },
+          html: {
+            type: "string",
+            description: "Optional HTML version of the email body for rich emails. When provided with body, the email is sent as multipart so providers can show HTML where supported and fall back to plain text.",
+          },
           animated: {
             type: "boolean",
             description: "Use typewriter effect (default: true)",
@@ -59,13 +65,14 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
         const toVal = params.to !== undefined ? String(params.to) : draft.to;
         const subjectVal = params.subject !== undefined ? String(params.subject) : draft.subject;
         const bodyVal = params.body !== undefined ? String(params.body) : draft.body;
+        const htmlVal = params.html !== undefined ? String(params.html) : draft.html;
 
         const updates: { field: "to" | "subject" | "body"; content: string }[] = [];
         if (params.to !== undefined) updates.push({ field: "to", content: toVal });
         if (params.subject !== undefined) updates.push({ field: "subject", content: subjectVal });
         if (params.body !== undefined) updates.push({ field: "body", content: bodyVal });
 
-        const newDraft = { to: toVal, subject: subjectVal, body: bodyVal };
+        const newDraft: Draft = { to: toVal, subject: subjectVal, body: bodyVal, ...(htmlVal !== undefined && { html: htmlVal }) };
         await writeFile(filePath, JSON.stringify(newDraft, null, 2));
 
         const animated = params.animated !== false;
@@ -120,14 +127,16 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
         }
 
         try {
+          const payload: { to: string; subject: string; text: string; html?: string } = {
+            to: draft.to.trim(),
+            subject: draft.subject?.trim() ?? "",
+            text: draft.body?.trim() ?? "",
+          };
+          if (draft.html?.trim()) payload.html = draft.html.trim();
           const res = await fetch("/api/send-email", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              to: draft.to.trim(),
-              subject: draft.subject?.trim() ?? "",
-              text: draft.body?.trim() ?? "",
-            }),
+            body: JSON.stringify(payload),
           });
           const data = await res.json().catch(() => ({}));
           const success = res.ok;
@@ -200,3 +209,4 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
     },
   ];
 }
+
