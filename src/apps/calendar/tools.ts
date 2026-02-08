@@ -148,5 +148,54 @@ export function createCalendarTools(appInstanceId: string): AppTool[] {
         return { success: true, data: { eventId } };
       },
     },
+    {
+      name: "calendar_update_event",
+      description: "Update an existing calendar event by id. Provide only the fields to change (title, date, time, endTime).",
+      appId: "calendar",
+      parameters: {
+        type: "object",
+        properties: {
+          eventId: { type: "string", description: "Event id (e.g. evt-123)" },
+          title: { type: "string", description: "New event title (optional)" },
+          date: { type: "string", description: "New date in YYYY-MM-DD format (optional)" },
+          time: { type: "string", description: "New start time (optional, e.g. 14:00)" },
+          endTime: { type: "string", description: "New end time (optional)" },
+        },
+        required: ["eventId"],
+      },
+      execute: async (params) => {
+        const eventId = String(params.eventId ?? "").trim();
+        if (!eventId) return { success: false, error: "eventId is required" };
+        let events: CalendarEvent[];
+        try {
+          const raw = await readFile(DEFAULT_PATH);
+          events = loadEventsFromJson(raw);
+        } catch {
+          return { success: false, error: "Could not load events" };
+        }
+        const idx = events.findIndex((e) => e.id === eventId);
+        if (idx === -1) return { success: false, error: "Event not found" };
+        const event = events[idx];
+        if (params.title !== undefined) event.title = String(params.title).trim();
+        if (params.date !== undefined) event.date = String(params.date).trim();
+        if (params.time !== undefined) event.time = params.time === "" ? undefined : (params.time as string);
+        if (params.endTime !== undefined) event.endTime = params.endTime === "" ? undefined : (params.endTime as string);
+        await writeFile(DEFAULT_PATH, JSON.stringify(events, null, 2));
+        return {
+          success: true,
+          data: event,
+          uiUpdate: {
+            type: "calendar_event_slide_in",
+            targetId: `${appInstanceId}-event-list`,
+            eventData: {
+              title: event.title,
+              time: event.time ?? "All day",
+              date: event.date,
+            },
+            direction: "left",
+          },
+        };
+      },
+    },
   ];
 }

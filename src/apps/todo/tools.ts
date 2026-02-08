@@ -9,6 +9,8 @@ interface Task {
   id: string;
   text: string;
   done: boolean;
+  priority?: "low" | "medium" | "high";
+  dueDate?: string;
 }
 
 function loadTasksFromJson(json: string): Task[] {
@@ -52,14 +54,17 @@ export function createTodoTools(appInstanceId: string): AppTool[] {
         } catch {
           taskList = [];
         }
+        const priority = (params.priority as "low" | "medium" | "high") || "medium";
+        const dueDate = typeof params.dueDate === "string" && params.dueDate.trim() ? params.dueDate.trim() : undefined;
         const newTask: Task = {
           id: `task-${Date.now()}`,
           text,
           done: false,
+          priority,
+          dueDate,
         };
         taskList.push(newTask);
         await writeFile(DEFAULT_PATH, JSON.stringify(taskList, null, 2));
-        const priority = (params.priority as "low" | "medium" | "high") || "medium";
         return {
           success: true,
           data: newTask,
@@ -144,6 +149,34 @@ export function createTodoTools(appInstanceId: string): AppTool[] {
           success: true,
           data: { tasks: filtered, count: filtered.length },
         };
+      },
+    },
+    {
+      name: "todo_delete_task",
+      description: "Remove a task from the todo list by its id. Use after listing tasks to get the taskId.",
+      appId: "todo",
+      parameters: {
+        type: "object",
+        properties: {
+          taskId: { type: "string", description: "ID of task to remove (e.g. task-123)" },
+        },
+        required: ["taskId"],
+      },
+      execute: async (params) => {
+        const taskId = String(params.taskId ?? "").trim();
+        if (!taskId) return { success: false, error: "taskId is required" };
+        let taskList: Task[];
+        try {
+          const raw = await readFile(DEFAULT_PATH);
+          taskList = loadTasksFromJson(raw);
+        } catch {
+          return { success: false, error: "Could not load tasks" };
+        }
+        const idx = taskList.findIndex((t) => t.id === taskId);
+        if (idx === -1) return { success: false, error: "Task not found" };
+        taskList.splice(idx, 1);
+        await writeFile(DEFAULT_PATH, JSON.stringify(taskList, null, 2));
+        return { success: true, data: { taskId } };
       },
     },
   ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { writeFile, readFile, listDirectory } from "@/lib/file-system";
+import { writeFile, readFile, listDirectory, deleteFile } from "@/lib/file-system";
 import type { AppTool } from "@/lib/types/agent";
 
 const NOTES_PREFIX = "/notes";
@@ -135,6 +135,32 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
             highlight: true,
           },
         };
+      },
+    },
+    {
+      name: "notes_delete_note",
+      description: "Delete a note by its path. Path must be under /notes/ (e.g. /notes/meeting.txt). Use after listing or searching notes to get the path.",
+      appId: "notes",
+      parameters: {
+        type: "object",
+        properties: {
+          path: { type: "string", description: "Full path to the note (e.g. /notes/meeting.txt)" },
+        },
+        required: ["path"],
+      },
+      execute: async (params) => {
+        const path = String(params.path ?? "").trim();
+        if (!path) return { success: false, error: "path is required" };
+        const normalized = path.replace(/\\/g, "/");
+        if (!normalized.startsWith(NOTES_PREFIX + "/") && normalized !== NOTES_PREFIX) {
+          return { success: false, error: "Path must be under /notes/" };
+        }
+        try {
+          await deleteFile(path);
+        } catch (err) {
+          return { success: false, error: err instanceof Error ? err.message : "Failed to delete note" };
+        }
+        return { success: true, data: { path } };
       },
     },
   ];

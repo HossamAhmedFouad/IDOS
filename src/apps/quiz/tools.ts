@@ -160,5 +160,37 @@ export function createQuizTools(appInstanceId: string): AppTool[] {
         };
       },
     },
+    {
+      name: "quiz_delete_card",
+      description: "Remove a flashcard from a topic/deck by its card id. Use quiz_list_cards first to get card ids.",
+      appId: "quiz",
+      parameters: {
+        type: "object",
+        properties: {
+          topic: { type: "string", description: "Topic/deck name" },
+          cardId: { type: "string", description: "Card id (e.g. card-123)" },
+        },
+        required: ["topic", "cardId"],
+      },
+      execute: async (params) => {
+        const topic = String(params.topic ?? "").trim();
+        const cardId = String(params.cardId ?? "").trim();
+        if (!topic || !cardId) return { success: false, error: "topic and cardId are required" };
+        const slug = toTopicSlug(topic);
+        const filePath = `${QUIZ_ROOT}/${slug}/${CARDS_FILENAME}`;
+        let cards: Flashcard[];
+        try {
+          const raw = await readFile(filePath);
+          cards = loadCardsFromJson(raw);
+        } catch {
+          return { success: false, error: `Topic "${slug}" not found` };
+        }
+        const idx = cards.findIndex((c) => c.id === cardId);
+        if (idx === -1) return { success: false, error: "Card not found" };
+        cards.splice(idx, 1);
+        await writeFile(filePath, JSON.stringify(cards, null, 2));
+        return { success: true, data: { topic: slug, cardId } };
+      },
+    },
   ];
 }

@@ -62,6 +62,8 @@ export async function listDirectory(path: string): Promise<string[]> {
 
 export async function deleteFile(path: string): Promise<void> {
   const normalized = normalizePath(path);
+  const record = await idb.get(normalized);
+  if (!record) throw new Error(`File not found: ${normalized}`);
   await idb.remove(normalized);
 }
 
@@ -81,6 +83,36 @@ export async function deleteDirectory(path: string): Promise<void> {
   }
 }
 
+/**
+ * Delete a path that may be either a file or a directory.
+ * - If the path is an exact file key, removes that file.
+ * - If the path has keys under it (directory), removes the directory and all contents.
+ * - If the path does not exist, throws.
+ */
+export async function deletePath(path: string): Promise<"file" | "directory"> {
+  const normalized = normalizePath(path);
+  const record = await idb.get(normalized);
+  if (record) {
+    await idb.remove(normalized);
+    return "file";
+  }
+  const dirPrefix = normalized.endsWith("/") ? normalized : normalized + "/";
+  const allKeys = await idb.keys(dirPrefix);
+  if (allKeys.length === 0) {
+    throw new Error(`Path not found: ${normalized}`);
+  }
+  for (const fullPath of allKeys) {
+    await idb.remove(fullPath);
+  }
+  const placeholderPath = dirPrefix + DIR_PLACEHOLDER;
+  try {
+    await idb.remove(placeholderPath);
+  } catch {
+    // placeholder may not exist
+  }
+  return "directory";
+}
+
 export async function moveFile(oldPath: string, newPath: string): Promise<void> {
   const oldNorm = normalizePath(oldPath);
   const newNorm = normalizePath(newPath);
@@ -88,6 +120,15 @@ export async function moveFile(oldPath: string, newPath: string): Promise<void> 
   if (!record) throw new Error(`File not found: ${oldNorm}`);
   await idb.set(newNorm, record.content);
   await idb.remove(oldNorm);
+}
+
+export async function copyFile(sourcePath: string, destinationPath: string): Promise<void> {
+  const sourceNorm = normalizePath(sourcePath);
+  const destNorm = normalizePath(destinationPath);
+  const record = await idb.get(sourceNorm);
+  if (!record) throw new Error(`File not found: ${sourceNorm}`);
+  await ensureParentDir(destNorm);
+  await idb.set(destNorm, record.content);
 }
 
 export async function getMetadata(path: string): Promise<FileMetadata> {

@@ -12,17 +12,17 @@ export interface ToolResult {
   multipleUpdates?: AppSpecificUIUpdate[];
 }
 
+/** JSON Schema-like property descriptor for tool parameters (supports nested objects in array items). */
+export interface ToolParameterProperty {
+  type: string;
+  description: string;
+  enum?: string[];
+  items?: { type: string } | { type: string; properties?: Record<string, ToolParameterProperty>; required?: string[] };
+}
+
 export interface AppToolParameters {
   type: "object";
-  properties: Record<
-    string,
-    {
-      type: string;
-      description: string;
-      enum?: string[];
-      items?: { type: string };
-    }
-  >;
+  properties: Record<string, ToolParameterProperty>;
   required: string[];
 }
 

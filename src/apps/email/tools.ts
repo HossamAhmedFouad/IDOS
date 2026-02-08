@@ -183,5 +183,20 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
         };
       },
     },
+    {
+      name: "email_clear_draft",
+      description: "Discard the current email draft. Clears to, subject, and body. Use when the user wants to start over or cancel the draft.",
+      appId: "email",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: [],
+      },
+      execute: async () => {
+        const emptyDraft: Draft = { to: "", subject: "", body: "" };
+        await writeFile(DEFAULT_PATH, JSON.stringify(emptyDraft, null, 2));
+        return { success: true, data: { cleared: true } };
+      },
+    },
   ];
 }
