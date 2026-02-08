@@ -272,6 +272,8 @@ export function AgentView() {
   const displayedAppId = focusedAppIdOverride ?? affectedAppIds[0] ?? null;
 
   // Instance id and config for the displayed app (use lastCreatedNotePath + agentRecentNotePaths for notes preview so user can navigate between agent-created notes)
+  const agentCodeEditorDirectoryPath = useAgentStore((s) => s.agentCodeEditorDirectoryPath);
+
   const displayedAppInstance = useMemo(() => {
     if (!displayedAppId) return null;
     const match = workspace.apps?.find((app) => app.type === displayedAppId);
@@ -285,11 +287,20 @@ export function AgentView() {
           }
         : displayedAppId === "whiteboard"
           ? { filePath: "/whiteboard/default.json" }
-          : displayedAppId === "code-editor" &&
-              (lastCodeEditorFilePath || agentRecentCodeEditorPaths.length > 0)
-            ? {
-                filePath: lastCodeEditorFilePath ?? agentRecentCodeEditorPaths[0],
-              }
+          : displayedAppId === "code-editor"
+            ? (() => {
+                const filePath =
+                  lastCodeEditorFilePath ?? agentRecentCodeEditorPaths[0] ?? undefined;
+                const dirFromFile = filePath
+                  ? (filePath.replace(/\/[^/]+$/, "") || "/")
+                  : undefined;
+                const directoryPath =
+                  agentCodeEditorDirectoryPath ?? dirFromFile ?? "/code";
+                return {
+                  directoryPath,
+                  filePath,
+                };
+              })()
             : {};
     return { id: `agent-preview-${displayedAppId}`, config: previewConfig };
   }, [
@@ -299,6 +310,7 @@ export function AgentView() {
     agentRecentNotePaths,
     lastCodeEditorFilePath,
     agentRecentCodeEditorPaths,
+    agentCodeEditorDirectoryPath,
   ]);
 
   // Resizable split: drag to update ratio

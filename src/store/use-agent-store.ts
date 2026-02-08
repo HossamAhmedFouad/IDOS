@@ -32,6 +32,8 @@ interface AgentState {
   lastCodeEditorFilePath: string | null;
   /** Recent code editor paths from this agent session (used by Code Editor preview when workspace has no Code Editor app). */
   agentRecentCodeEditorPaths: string[];
+  /** Directory path selected in Code Editor when it is a preview (no real app in workspace). Enables "Open folder" to work. */
+  agentCodeEditorDirectoryPath: string | null;
 
   startExecution: (intent: string) => void;
   /** Seed execution history (e.g. when continuing in same session). Call after startExecution. */
@@ -54,6 +56,7 @@ interface AgentState {
   addPathToAgentRecentCodeEditorPaths: (path: string) => void;
   /** Clear agent recent code editor paths (e.g. when starting a new agent task). */
   clearAgentRecentCodeEditorPaths: () => void;
+  setAgentCodeEditorDirectoryPath: (path: string | null) => void;
   /** Bump agentDataVersion so file-based apps (e.g. whiteboard) refetch. */
   incrementAgentDataVersion: () => void;
 }
@@ -73,6 +76,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   agentNoteContent: null,
   lastCodeEditorFilePath: null,
   agentRecentCodeEditorPaths: [],
+  agentCodeEditorDirectoryPath: null,
 
   startExecution: (intent) =>
     set({
@@ -132,6 +136,7 @@ export const useAgentStore = create<AgentState>((set) => ({
       return { agentRecentCodeEditorPaths: [path, ...rest].slice(0, 20) };
     }),
   clearAgentRecentCodeEditorPaths: () => set({ agentRecentCodeEditorPaths: [] }),
+  setAgentCodeEditorDirectoryPath: (path) => set({ agentCodeEditorDirectoryPath: path }),
   incrementAgentDataVersion: () =>
     set((s) => ({ agentDataVersion: s.agentDataVersion + 1 })),
 }));

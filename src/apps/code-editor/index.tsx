@@ -172,7 +172,12 @@ export function CodeEditorApp({ id, config }: AppProps) {
   const switchToFolder = useCallback(
     (path: string) => {
       setError(null);
-      updateAppConfig(id, { directoryPath: path, filePath: undefined });
+      if (id.startsWith("agent-preview-")) {
+        useAgentStore.getState().setAgentCodeEditorDirectoryPath(path);
+        useAgentStore.getState().setLastCodeEditorFilePath(null);
+      } else {
+        updateAppConfig(id, { directoryPath: path, filePath: undefined });
+      }
       setOpenFiles([]);
       setActiveFile(null);
       setContentByPath({});
