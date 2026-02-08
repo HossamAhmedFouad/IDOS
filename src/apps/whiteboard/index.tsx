@@ -26,13 +26,12 @@ export function WhiteboardApp({ id, config }: AppProps) {
   const filePath =
     (config?.filePath as string | undefined) ?? `${WHITEBOARD_DIR}/${id}.json`;
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const whiteboardTools = useMemo(() => createWhiteboardTools(id), [id]);
 
   useEffect(() => {
     whiteboardTools.forEach((tool) => registerTool(tool));
-    return () => whiteboardTools.forEach((tool) => unregisterTool(tool.name));
-  }, [whiteboardTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [whiteboardTools, registerTool]);
 
   const view = useWorkspaceStore((s) => s.view);
   const agentDataVersion = useAgentStore((s) => s.agentDataVersion);

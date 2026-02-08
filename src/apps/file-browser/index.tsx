@@ -30,13 +30,12 @@ interface FileEntry {
 export function FileBrowserApp({ id, config }: AppProps) {
   const rootPath = (config?.rootPath as string | undefined) ?? ROOT;
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const fileBrowserTools = useMemo(() => createFileBrowserTools(id), [id]);
 
   useEffect(() => {
     fileBrowserTools.forEach((tool) => registerTool(tool));
-    return () => fileBrowserTools.forEach((tool) => unregisterTool(tool.name));
-  }, [fileBrowserTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [fileBrowserTools, registerTool]);
 
   const [currentPath, setCurrentPath] = useState(rootPath);
   const [entries, setEntries] = useState<FileEntry[]>([]);

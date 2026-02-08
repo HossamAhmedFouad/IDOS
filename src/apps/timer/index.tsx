@@ -30,13 +30,12 @@ function parseTimerState(raw: string): TimerState {
 
 export function TimerApp({ id, config }: AppProps) {
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const timerTools = useMemo(() => createTimerTools(id), [id]);
 
   useEffect(() => {
     timerTools.forEach((tool) => registerTool(tool));
-    return () => timerTools.forEach((tool) => unregisterTool(tool.name));
-  }, [timerTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [timerTools, registerTool]);
 
   const [seconds, setSeconds] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);

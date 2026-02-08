@@ -33,15 +33,12 @@ export function NotesApp({ id, config }: AppProps) {
   const filePath = config?.filePath as string | undefined;
   const recentFilePaths = (config?.recentFilePaths as string[] | undefined) ?? [];
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const notesTools = useMemo(() => createNotesTools(id), [id]);
 
   useEffect(() => {
     notesTools.forEach((tool) => registerTool(tool));
-    return () => {
-      notesTools.forEach((tool) => unregisterTool(tool.name));
-    };
-  }, [notesTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [notesTools, registerTool]);
   const draftContent = config?.draftContent as string | undefined;
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
   const [content, setContent] = useState(() =>

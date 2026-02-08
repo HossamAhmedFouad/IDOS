@@ -46,13 +46,12 @@ function toTopicSlug(name: string): string {
 export function QuizApp({ id, config }: AppProps) {
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const quizTools = useMemo(() => createQuizTools(id), [id]);
 
   useEffect(() => {
     quizTools.forEach((tool) => registerTool(tool));
-    return () => quizTools.forEach((tool) => unregisterTool(tool.name));
-  }, [quizTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [quizTools, registerTool]);
   const rootPath = (config?.directoryPath as string | undefined) ?? QUIZ_ROOT;
   const savedFilePath = config?.filePath as string | undefined;
   const legacySinglePath = rootPath + "/" + CARDS_FILENAME;

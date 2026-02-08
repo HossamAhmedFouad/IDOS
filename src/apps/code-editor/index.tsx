@@ -50,13 +50,12 @@ function dirname(path: string): string {
 export function CodeEditorApp({ id, config }: AppProps) {
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const codeEditorTools = useMemo(() => createCodeEditorTools(id), [id]);
 
   useEffect(() => {
     codeEditorTools.forEach((tool) => registerTool(tool));
-    return () => codeEditorTools.forEach((tool) => unregisterTool(tool.name));
-  }, [codeEditorTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [codeEditorTools, registerTool]);
   const configDirectory = config?.directoryPath as string | undefined;
   const configFilePath = config?.filePath as string | undefined;
   const directoryPath = configDirectory ?? dirname(configFilePath ?? DEFAULT_DIRECTORY + "/main.js") ?? DEFAULT_DIRECTORY;

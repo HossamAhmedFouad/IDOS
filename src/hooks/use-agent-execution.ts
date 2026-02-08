@@ -261,6 +261,7 @@ export function useAgentExecution() {
             const name = d?.toolName;
             const args = d?.args ?? {};
             const tool = name ? getTool(name) : undefined;
+            // Tool can be missing if it was never registered (e.g. app not open when run started).
             if (!name || !tool) {
               addEventAndSync({
                 type: "error",
@@ -355,6 +356,7 @@ export function useAgentExecution() {
             const name = payload?.toolName as string | undefined;
             const args = (payload?.args as Record<string, unknown>) ?? {};
             const tool = name ? getTool(name) : undefined;
+            // Tool can be missing if it was never registered (e.g. app not open when run started).
             if (!name || !tool) {
               addEventAndSync({
                 type: "error",

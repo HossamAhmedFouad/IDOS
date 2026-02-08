@@ -76,13 +76,12 @@ const TIME_OPTIONS = (() => {
 export function CalendarApp({ id, config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const calendarTools = useMemo(() => createCalendarTools(id), [id]);
 
   useEffect(() => {
     calendarTools.forEach((tool) => registerTool(tool));
-    return () => calendarTools.forEach((tool) => unregisterTool(tool.name));
-  }, [calendarTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [calendarTools, registerTool]);
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(() => new Date());

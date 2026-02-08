@@ -32,13 +32,12 @@ function parseDraft(json: string): Draft {
 export function EmailApp({ id, config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const emailTools = useMemo(() => createEmailTools(id), [id]);
 
   useEffect(() => {
     emailTools.forEach((tool) => registerTool(tool));
-    return () => emailTools.forEach((tool) => unregisterTool(tool.name));
-  }, [emailTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [emailTools, registerTool]);
   const [to, setTo] = useState("");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");

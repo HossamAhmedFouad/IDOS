@@ -97,6 +97,8 @@ Think step-by-step:
 4. Do NOT respond with only text ("Done", "Task complete", etc.) until the user's request is fully done. If more tool calls are needed to complete the goal, always make the next tool call instead of replying with text.
 5. Only when every part of the user's intent is satisfied (e.g. all requested items created, drawn, or updated), then reply briefly with a summary—no further tool call.
 
+When creating a note that contains or is written in markdown, use a path with the .md extension (e.g. /notes/my-note.md). Use .txt or no extension for plain text notes.
+
 Always explain briefly what you're doing before calling a tool. Prefer calling more tools to finish the task rather than stopping early.`;
 }
 

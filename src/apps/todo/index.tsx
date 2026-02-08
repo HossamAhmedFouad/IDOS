@@ -30,13 +30,12 @@ function loadTasksFromJson(json: string): Task[] {
 export function TodoApp({ id, config }: AppProps) {
   const filePath = (config?.filePath as string | undefined) ?? DEFAULT_PATH;
   const registerTool = useToolRegistry((s) => s.registerTool);
-  const unregisterTool = useToolRegistry((s) => s.unregisterTool);
   const todoTools = useMemo(() => createTodoTools(id), [id]);
 
   useEffect(() => {
     todoTools.forEach((tool) => registerTool(tool));
-    return () => todoTools.forEach((tool) => unregisterTool(tool.name));
-  }, [todoTools, registerTool, unregisterTool]);
+    // Do not unregister on unmount: agent may still have in-flight tool calls for this app.
+  }, [todoTools, registerTool]);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [input, setInput] = useState("");
