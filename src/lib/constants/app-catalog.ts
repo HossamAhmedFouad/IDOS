@@ -18,6 +18,7 @@ export const APP_CATALOG: AppCatalogEntry[] = [
   { id: "whiteboard", name: "Whiteboard" },
   { id: "ai-chat", name: "AI Chat" },
   { id: "explanation-panel", name: "Explanation Panel" },
+  { id: "terminal", name: "Terminal" },
 ];
 
 export function getAppName(id: AppId): string {

@@ -11,6 +11,7 @@ import {
   PenTool,
   Bot,
   BookOpen,
+  Terminal,
 } from "lucide-react";
 import type { AppId } from "@/lib/types";
 
@@ -26,6 +27,7 @@ export const APP_ICONS: Record<AppId, LucideIcon> = {
   whiteboard: PenTool,
   "ai-chat": Bot,
   "explanation-panel": BookOpen,
+  terminal: Terminal,
 };
 
 export function getAppIcon(id: AppId): LucideIcon {

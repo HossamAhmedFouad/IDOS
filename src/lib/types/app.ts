@@ -14,7 +14,8 @@ export type AppId =
   | "file-browser"
   | "whiteboard"
   | "ai-chat"
-  | "explanation-panel";
+  | "explanation-panel"
+  | "terminal";
 
 /**
  * Position and dimensions for an app window (in pixels).

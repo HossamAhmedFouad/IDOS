@@ -215,14 +215,20 @@ Tools are registered from nine apps when the user is on **Home** or **Agent** vi
 
 | Tool | Description |
 |------|-------------|
-| `whiteboard_draw` | Draw a shape (rectangle, circle, line, arrow) |
+| `whiteboard_draw_shape` | Draw a shape (rectangle or circle) |
+| `whiteboard_draw_line` | Draw a line or arrow from (x1,y1) to (x2,y2) |
 | `whiteboard_add_text` | Add text at a position |
 | `whiteboard_clear` | Clear the whiteboard |
 
-### whiteboard_draw
+### whiteboard_draw_shape
 
-- **Parameters:** `shape` (string: `rectangle` \| `circle` \| `line` \| `arrow`), `x` (number), `y` (number), `width` (optional), `height` (optional)
+- **Parameters:** `shape` (string: `rectangle` \| `circle`), `x` (number), `y` (number), `width` (optional), `height` (optional)
 - **Example:** Draw a rectangle at (100, 100) with size 80×60.
+
+### whiteboard_draw_line
+
+- **Parameters:** `shape` (string: `line` \| `arrow`), `x1` (number), `y1` (number), `x2` (number), `y2` (number)
+- **Example:** Draw an arrow from (50, 50) to (200, 100).
 
 ### whiteboard_add_text
 
@@ -352,7 +358,7 @@ The following are **example scenarios** the agent can achieve by chaining multip
 ### Whiteboard brainstorm
 
 - **Intent:** "Draw a rectangle and add text 'Ideas' on the whiteboard."
-- **Tools:** `whiteboard_draw` (shape: rectangle, x, y, width, height) → `whiteboard_add_text` (text: "Ideas", x, y).
+- **Tools:** `whiteboard_draw_shape` (shape: rectangle, x, y, width, height) → `whiteboard_add_text` (text: "Ideas", x, y).
 - **Flow:** Add shape, then add label.
 
 ### Build a quiz deck
@@ -380,7 +386,7 @@ file_browser_move_file      file_browser_delete_file
 timer_start                 timer_reset                 timer_pause
 code_editor_write           code_editor_read_file       code_editor_highlight_lines
 email_compose               email_send                  email_add_attachment
-whiteboard_draw             whiteboard_add_text         whiteboard_clear
+whiteboard_draw_shape       whiteboard_draw_line        whiteboard_add_text         whiteboard_clear
 quiz_add_card               quiz_list_cards             quiz_list_topics
 quiz_start_session
 ```

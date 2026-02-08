@@ -18,4 +18,5 @@ export const APP_DEFAULT_SIZES: Record<AppId, { width: number; height: number }>
     whiteboard: { width: 550, height: 450 },
     "ai-chat": { width: 420, height: 500 },
     "explanation-panel": { width: 380, height: 350 },
+    terminal: { width: 640, height: 400 },
   };

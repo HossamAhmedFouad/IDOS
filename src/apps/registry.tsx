@@ -28,6 +28,7 @@ const APP_COMPONENTS: Record<AppId, React.LazyExoticComponent<React.ComponentTyp
   "explanation-panel": lazy(() =>
     import("./explanation-panel").then((m) => ({ default: m.ExplanationPanelApp }))
   ),
+  terminal: lazy(() => import("./terminal").then((m) => ({ default: m.TerminalApp }))),
 };
 
 function PlaceholderApp({ appType }: AppProps) {

@@ -66,6 +66,7 @@ Rules:
 const VALID_APP_TYPES: AppId[] = [
   "notes", "timer", "todo", "code-editor", "quiz", "email",
   "calendar", "file-browser", "whiteboard", "ai-chat", "explanation-panel",
+  "terminal",
 ];
 const VALID_LAYOUTS: LayoutStrategy[] = ["floating", "grid", "split", "tiled"];
 const VALID_MODES: SystemMode[] = ["dark", "dnd"];
