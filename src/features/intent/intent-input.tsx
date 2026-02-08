@@ -1,9 +1,9 @@
 "use client";
 
 import type { LucideIcon } from "lucide-react";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useImperativeHandle, forwardRef, useRef } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, LayoutGrid, Sparkles } from "lucide-react";
 import type { WorkspaceConfig } from "@/lib/types/workspace";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,12 @@ export interface IntentInputProps {
   loading?: boolean;
 }
 
-export function IntentInput({
+export interface IntentInputHandle {
+  setIntent: (value: string) => void;
+  focus: () => void;
+}
+
+export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(function IntentInput({
   onSubmitting,
   onSuccess,
   submitLabel = "Go",
@@ -58,7 +63,7 @@ export function IntentInput({
   modeSelect,
   keepLoadingAfterAgentSubmit = false,
   loading: loadingProp,
-}: IntentInputProps = {}) {
+}, ref) {
   const [intent, setIntent] = useState("");
   const [internalLoading, setInternalLoading] = useState(false);
   const loading = loadingProp !== undefined ? loadingProp : internalLoading;
@@ -69,6 +74,17 @@ export function IntentInput({
   const [isDeletingPlaceholder, setIsDeletingPlaceholder] = useState(false);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    setIntent(value: string) {
+      setIntent((_) => value);
+      setError(null);
+    },
+    focus() {
+      inputRef.current?.focus();
+    },
+  }), []);
 
   useEffect(() => {
     if (intent.length > 0 || loading) return;
@@ -196,16 +212,23 @@ export function IntentInput({
         {modeSelect && (
           <Popover open={modePopoverOpen} onOpenChange={setModePopoverOpen}>
             <PopoverTrigger asChild>
-              <button
+              <Button
                 type="button"
-                className="flex shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-sm font-medium text-foreground hover:bg-accent/60"
+                variant="default"
+                size="sm"
+                className="shrink-0 gap-2 rounded-lg shadow-sm hover:bg-primary/90"
                 aria-label="Choose mode"
               >
+                {modeSelect.value === "agent" ? (
+                  <Sparkles className="size-4" />
+                ) : (
+                  <LayoutGrid className="size-4" />
+                )}
                 <span>{modeLabel}</span>
-                <ChevronDown className="size-4 text-muted-foreground" />
-              </button>
+                <ChevronDown className="size-4 opacity-80" />
+              </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-44 p-2">
+            <PopoverContent align="start" className="w-48 p-2">
               <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
@@ -214,12 +237,13 @@ export function IntentInput({
                     setModePopoverOpen(false);
                   }}
                   className={cn(
-                    "rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors",
                     modeSelect.value === "workspace"
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-primary text-primary-foreground"
                       : "text-foreground hover:bg-accent/60"
                   )}
                 >
+                  <LayoutGrid className="size-4 shrink-0" />
                   Workspace
                 </button>
                 <button
@@ -229,12 +253,13 @@ export function IntentInput({
                     setModePopoverOpen(false);
                   }}
                   className={cn(
-                    "rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                    "flex items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors",
                     modeSelect.value === "agent"
-                      ? "bg-accent text-accent-foreground"
+                      ? "bg-primary text-primary-foreground"
                       : "text-foreground hover:bg-accent/60"
                   )}
                 >
+                  <Sparkles className="size-4 shrink-0" />
                   Agent
                 </button>
               </div>
@@ -243,6 +268,7 @@ export function IntentInput({
         )}
         <div className="relative min-h-12 flex-1">
           <Input
+            ref={inputRef}
             type="text"
             value={intent}
             onChange={(e) => {
@@ -300,4 +326,4 @@ export function IntentInput({
       )}
     </motion.form>
   );
-}
+});

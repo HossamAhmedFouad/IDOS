@@ -217,6 +217,37 @@
   }
 }
 
+/* IDOS home title: calm color glitch in agent mode — cyan + red tint, original text color */
+@keyframes idos-title-glitch {
+  0%, 14%, 20%, 64%, 70%, 100% {
+    text-shadow: none;
+  }
+  15%, 16% {
+    text-shadow:
+      -5px 0 rgba(0, 229, 255, 0.85),
+      5px 0 rgba(255, 51, 102, 0.75);
+  }
+  17%, 18% {
+    text-shadow:
+      5px 0 rgba(0, 229, 255, 0.8),
+      -5px 0 rgba(255, 51, 102, 0.8);
+  }
+  65%, 66% {
+    text-shadow:
+      -5px 0 rgba(0, 229, 255, 0.85),
+      5px 0 rgba(255, 51, 102, 0.75);
+  }
+  67%, 68% {
+    text-shadow:
+      5px 0 rgba(0, 229, 255, 0.8),
+      -5px 0 rgba(255, 51, 102, 0.8);
+  }
+}
+
+.idos-title-glitch {
+  animation: idos-title-glitch 8s steps(1) infinite;
+}
+
 /* DND mode: visual indicator available via [data-dnd="true"] */
 
 /* Quiz app: 3D flip card */

@@ -10,7 +10,7 @@ import {
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
-import { IntentInput } from "@/features/intent/intent-input";
+import { IntentInput, type IntentInputHandle } from "@/features/intent/intent-input";
 import { IntentBlob } from "@/components/intent-blob";
 import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
@@ -18,6 +18,7 @@ import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { computeLayout } from "./layout-engine";
 import { AppRenderer } from "./app-renderer";
 
@@ -37,6 +38,29 @@ const LOADING_MESSAGES = [
   "Getting everything ready...",
   "Starting agent...",
   "Preparing agent...",
+];
+
+const SUGGESTION_PROMPTS = [
+  "Help me learn JavaScript better",
+  "Design with me a better landing page",
+  "Explain this code like I'm 10",
+  "Help me debug my React component",
+  "Design with me a better onboarding flow",
+  "Teach me the basics of TypeScript",
+  "Design with me a better dashboard layout",
+  "Help me write a clear README for my repo",
+  "Design with me a better color palette",
+  "Help me learn CSS layout (flexbox and grid)",
+  "Design with me a better mobile nav",
+  "Help me refactor this function step by step",
+  "Design with me a better settings screen",
+  "Help me learn async/await and promises",
+  "Design with me a better data table",
+  "Help me plan my next feature",
+  "Design with me a better empty state",
+  "Help me learn Git branching",
+  "Design with me a better error page",
+  "Help me break down this problem into steps",
 ];
 
 export function HomeView() {
@@ -72,6 +96,18 @@ export function HomeView() {
   );
   const intentContainerRef = useRef<HTMLDivElement>(null);
   const blobRef = useRef<HTMLDivElement>(null);
+  const intentInputRef = useRef<IntentInputHandle>(null);
+
+  const [suggestionCards, setSuggestionCards] = useState<string[]>(() =>
+    SUGGESTION_PROMPTS.slice(0, 3)
+  );
+  useEffect(() => {
+    const indices = new Set<number>();
+    while (indices.size < 3) {
+      indices.add(Math.floor(Math.random() * SUGGESTION_PROMPTS.length));
+    }
+    setSuggestionCards(Array.from(indices).map((i) => SUGGESTION_PROMPTS[i]));
+  }, []);
 
   const [viewport, setViewport] = useState(() =>
     typeof window !== "undefined"
@@ -254,14 +290,19 @@ export function HomeView() {
               >
                 <motion.p
                   className="text-5xl font-bold text-foreground md:text-6xl [font-family:var(--font-pixel)]"
-                  animate={{ opacity: intentLength > 0 ? 0 : 1 }}
-                  transition={{ duration: 0.3 }}
+                  animate={{
+                    opacity: intentLength > 0 ? 0 : 1,
+                  }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
                   aria-hidden={intentLength > 0}
                 >
-                  IDOS
+                  <span className={cn(homeAgentMode && "idos-title-glitch")}>
+                    IDOS
+                  </span>
                 </motion.p>
                 <div className="w-full">
                   <IntentInput
+                    ref={intentInputRef}
                     submitIcon={Play}
                     submitLabel="Start"
                     onIntentChange={(v) => setIntentLength(v.length)}
@@ -274,6 +315,33 @@ export function HomeView() {
                       onChange: (v) => setHomeAgentMode(v === "agent"),
                     }}
                   />
+                </div>
+                <div className="grid w-full max-w-3xl grid-cols-1 gap-3 pt-2 sm:grid-cols-3">
+                  {suggestionCards.map((prompt, i) => (
+                    <motion.button
+                      key={prompt}
+                      type="button"
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 * i, duration: 0.25 }}
+                      onClick={() => {
+                        intentInputRef.current?.setIntent(prompt);
+                        intentInputRef.current?.focus();
+                      }}
+                      className={cn(
+                        "group relative overflow-hidden rounded-xl border border-border/80 bg-card/60 p-4 text-left backdrop-blur-sm",
+                        "transition-colors hover:border-primary/50 hover:bg-card/90 hover:shadow-lg hover:shadow-primary/5",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      )}
+                    >
+                      <span className="absolute right-2 top-2 font-mono text-[10px] text-muted-foreground/60">
+                        {["∑", "√", "∞"][i]}
+                      </span>
+                      <p className="pr-6 text-sm font-medium text-foreground group-hover:text-primary">
+                        {prompt}
+                      </p>
+                    </motion.button>
+                  ))}
                 </div>
               </motion.div>
             )}
