@@ -4,6 +4,31 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { listDirectory, readFile, writeFile, createDirectory, deletePath } from "@/lib/file-system";
 import type { AppProps } from "@/lib/types";
 
+/** Command names for Tab completion */
+const COMMAND_NAMES = [
+  "help", "?", "clear", "cls", "pwd", "ls", "cd", "cat", "mkdir", "touch", "rm", "echo", "id",
+];
+
+/** Commands that take a path argument (for path completion) */
+const PATH_COMMANDS = new Set(["ls", "cd", "cat", "mkdir", "touch", "rm"]);
+
+/** Regex per command: full line must match. Ensures unique format per command. */
+const COMMAND_FORMATS: Record<string, RegExp> = {
+  help: /^help\s*$/,
+  "?": /^\?\s*$/,
+  clear: /^clear\s*$/,
+  cls: /^cls\s*$/,
+  id: /^id\s*$/,
+  pwd: /^pwd\s*$/,
+  echo: /^echo(\s+.*)?$/,
+  ls: /^ls(\s+.+)?$/,
+  cd: /^cd(\s*|\s+.+)$/,
+  cat: /^cat\s+.+$/,
+  mkdir: /^mkdir\s+.+$/,
+  touch: /^touch\s+.+$/,
+  rm: /^rm\s+.+$/,
+};
+
 const IDOS_ASCII_ART = `
 _________ ______   _______  _______ 
 \\__   __/(  __  \\ (  ___  )(  ____ \\
@@ -25,6 +50,14 @@ function formatPrompt(cwd: string): string {
 type OutputLine =
   | { type: "art" | "welcome" | "prompt" | "command" | "output" | "error"; text: string }
   | { type: "ls"; entries: string[] };
+
+function longestCommonPrefix(words: string[]): string {
+  if (words.length === 0) return "";
+  let i = 0;
+  const first = words[0];
+  while (i < first.length && words.every((w) => w[i] === first[i])) i++;
+  return first.slice(0, i);
+}
 
 /** Resolve a path relative to cwd. Handles ., .., ~, and absolute paths. */
 function resolvePath(cwd: string, raw: string): string {
@@ -59,9 +92,17 @@ type RunResult = {
 
 async function runCommand(cmd: string, cwd: string): Promise<RunResult> {
   const trimmed = cmd.trim();
-  const t = trimmed.toLowerCase();
   const args = trimmed.split(/\s+/);
-  const first = args[0] ?? "";
+  const first = (args[0] ?? "").toLowerCase();
+
+  // Validate command format with regex (unique format per command)
+  const format = COMMAND_FORMATS[first];
+  if (format && !format.test(trimmed)) {
+    return {
+      lines: [`Invalid format for '${first}'. Type 'help' for usage.`],
+      error: true,
+    };
+  }
 
   if (first === "help" || first === "?") {
     return {
@@ -176,6 +217,8 @@ async function runCommand(cmd: string, cwd: string): Promise<RunResult> {
   return { lines: [`Unknown command: ${trimmed}. Type 'help' for commands.`], error: true };
 }
 
+const MAX_HISTORY = 100;
+
 export function TerminalApp({ id, dimensions }: AppProps) {
   const [cwd, setCwd] = useState("/");
   const [outputLines, setOutputLines] = useState<OutputLine[]>(() => [
@@ -183,7 +226,11 @@ export function TerminalApp({ id, dimensions }: AppProps) {
     { type: "welcome", text: "Type `help` for commands." },
   ]);
   const [input, setInput] = useState("");
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [draft, setDraft] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo(0, scrollRef.current.scrollHeight);
@@ -192,8 +239,15 @@ export function TerminalApp({ id, dimensions }: AppProps) {
   const submit = useCallback(() => {
     const line = input.trim();
     setInput("");
+    setHistoryIndex(-1);
+    setDraft("");
 
     if (!line) return;
+
+    setCommandHistory((prev) => {
+      const next = prev[0] === line ? prev : [line, ...prev].slice(0, MAX_HISTORY);
+      return next;
+    });
 
     const promptStr = formatPrompt(cwd);
     void runCommand(line, cwd).then(
@@ -218,25 +272,109 @@ export function TerminalApp({ id, dimensions }: AppProps) {
     );
   }, [input, cwd]);
 
+  const tryTabComplete = useCallback(
+    async (value: string, cursorPos: number) => {
+      const beforeCursor = value.slice(0, cursorPos);
+      const tokenStart = beforeCursor.lastIndexOf(" ") + 1;
+      const tokenEnd = cursorPos;
+      const token = value.slice(tokenStart, tokenEnd);
+      const parts = beforeCursor.trimEnd().split(/\s+/);
+      const isFirstWord = parts.length <= 1 && beforeCursor.trim().length > 0;
+
+      if (isFirstWord) {
+        const prefix = token.toLowerCase();
+        const matches = COMMAND_NAMES.filter((c) => c.startsWith(prefix) || (c === "?" && prefix === ""));
+        if (matches.length === 0) return;
+        if (matches.length === 1) {
+          const completion = matches[0] + (beforeCursor.endsWith(" ") ? "" : " ");
+          setInput(value.slice(0, tokenStart) + completion + value.slice(cursorPos));
+          return;
+        }
+        const common = longestCommonPrefix(matches.filter((m) => m !== "?"));
+        if (common && common.length > token.length) {
+          setInput(value.slice(0, tokenStart) + common + value.slice(cursorPos));
+        }
+        return;
+      }
+
+      const firstWord = parts[0]?.toLowerCase() ?? "";
+      if (!PATH_COMMANDS.has(firstWord)) return;
+
+      const pathToken = token.replace(/\\/g, "/").trim();
+      const baseDir = pathToken.includes("/")
+        ? resolvePath(cwd, pathToken.slice(0, pathToken.lastIndexOf("/") + 1))
+        : cwd;
+      const prefix = pathToken.includes("/") ? pathToken.slice(pathToken.lastIndexOf("/") + 1) : pathToken;
+
+      try {
+        const entries = await listDirectory(baseDir === "" ? "/" : baseDir);
+        const matches = prefix
+          ? entries.filter((e) => e.toLowerCase().startsWith(prefix.toLowerCase()))
+          : entries;
+        if (matches.length === 0) return;
+        const pathPrefix = pathToken.includes("/") ? pathToken.slice(0, pathToken.lastIndexOf("/") + 1) : "";
+        if (matches.length === 1) {
+          const completion = pathPrefix + matches[0] + (pathToken.endsWith("/") ? "" : " ");
+          setInput(value.slice(0, tokenStart) + completion + value.slice(cursorPos));
+          return;
+        }
+        const common = longestCommonPrefix(matches);
+        if (common && common.length > prefix.length) {
+          setInput(value.slice(0, tokenStart) + pathPrefix + common + value.slice(cursorPos));
+        }
+      } catch {
+        // ignore
+      }
+    },
+    [cwd]
+  );
+
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter") {
         e.preventDefault();
         submit();
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        if (commandHistory.length === 0) return;
+        if (historyIndex === -1) setDraft(input);
+        const nextIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
+        setHistoryIndex(nextIndex);
+        setInput(commandHistory[nextIndex]);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        if (historyIndex <= -1) return;
+        const nextIndex = historyIndex - 1;
+        setHistoryIndex(nextIndex);
+        setInput(nextIndex === -1 ? draft : commandHistory[nextIndex]);
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        const el = inputRef.current;
+        if (!el) return;
+        const start = el.selectionStart ?? input.length;
+        void tryTabComplete(input, start);
+        return;
       }
     },
-    [submit]
+    [submit, commandHistory, historyIndex, draft, input, tryTabComplete]
   );
 
   return (
     <div
       id={id}
-      ref={scrollRef}
-      className="flex h-full flex-col overflow-y-auto overflow-x-auto rounded bg-[oklch(0.08_0.02_265)] font-mono text-sm text-[oklch(0.85_0.02_265)]"
-      style={{ minHeight: dimensions?.height ?? 400 }}
+      className="flex h-full flex-col overflow-hidden rounded bg-[oklch(0.08_0.02_265)] font-mono text-sm text-[oklch(0.85_0.02_265)]"
       data-terminal-output
     >
-      <div className="min-h-0 flex-1 px-3 py-3">
+      <div
+        ref={scrollRef}
+        className="min-h-0 flex-1 overflow-y-auto overflow-x-auto px-3 py-3"
+      >
         {outputLines.map((line, i) =>
           line.type === "ls" ? (
             <div key={i} className="my-1.5">
@@ -278,6 +416,7 @@ export function TerminalApp({ id, dimensions }: AppProps) {
         <div className="flex items-baseline">
           <span className="shrink-0 text-[oklch(0.75_0.15_265)]">{formatPrompt(cwd)}</span>
           <input
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
