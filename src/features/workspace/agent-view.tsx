@@ -11,7 +11,13 @@ import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentSessionsStore } from "@/store/use-agent-sessions-store";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
-import { AgentEventCard } from "@/components/agent-panel";
+import {
+  AgentExecutionStepCard,
+  buildExecutionSteps,
+  AgentCodePreview,
+  getCodePreviewFromHistory,
+  isCodeToolCallPending,
+} from "@/components/agent-panel";
 import { MarkdownContent } from "@/components/markdown-content";
 import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
@@ -219,6 +225,18 @@ export function AgentView() {
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
   }, [displayHistory.length, streamingThinking]);
+
+  // Execution steps: pair tool-call with tool-result, keep other events as single steps
+  const executionSteps = useMemo(
+    () => buildExecutionSteps(displayHistory.filter((e) => e.type !== "agent-start")),
+    [displayHistory]
+  );
+
+  // Code preview when last event is a code tool-call (no result yet)
+  const codePreview = useMemo(
+    () => (isCodeToolCallPending(displayHistory) ? getCodePreviewFromHistory(displayHistory) : null),
+    [displayHistory]
+  );
 
   // Affected apps: unique app IDs in order of first appearance in execution
   const affectedAppIds = useMemo(() => {
@@ -589,31 +607,64 @@ export function AgentView() {
                     </div>
                   </motion.div>
                 )}
+                {codePreview && (
+                  <div className="mb-3">
+                    <AgentCodePreview
+                      content={codePreview.content}
+                      path={codePreview.path}
+                      toolName={codePreview.toolName}
+                      typewriter
+                    />
+                  </div>
+                )}
                 <h3 className="mb-2 text-sm font-medium text-agent-accent-foreground">
                   Execution sequence
                 </h3>
-                <div className="space-y-3">
-                  {displayHistory
-                    .filter((e) => e.type !== "agent-start")
-                    .map((event, idx) =>
-                      event.type === "user-message" ? (
-                        <div key={idx} className="flex justify-end">
-                          <div className="max-w-[85%]">
-                            <AgentEventCard event={event} />
-                          </div>
-                        </div>
-                      ) : (
-                        <div key={idx} className="flex gap-2">
+                <div className="space-y-2">
+                  {executionSteps.map((step, idx) => {
+                    const isToolStep = step.kind === "tool";
+                    const toolStepNum = isToolStep
+                      ? executionSteps
+                          .slice(0, idx)
+                          .filter((s) => s.kind === "tool").length + 1
+                      : 0;
+                    return (
+                      <div key={idx} className="flex gap-2">
+                        {isToolStep && (
                           <span className="shrink-0 mt-0.5 text-xs font-mono text-muted-foreground tabular-nums">
-                            {displayHistory
-                              .filter((e) => e.type !== "agent-start" && e.type !== "user-message")
-                              .indexOf(event) + 1}
-                            .
+                            {toolStepNum}.
                           </span>
-                          <AgentEventCard event={event} />
-                        </div>
-                      )
-                    )}
+                        )}
+                        {step.kind === "other" &&
+                          (step.event.type === "user-message" ? (
+                            <div className="flex w-full justify-end">
+                              <div className="max-w-[85%]">
+                                <AgentExecutionStepCard
+                                  step={step}
+                                  stepIndex={idx}
+                                />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full">
+                              <AgentExecutionStepCard
+                                step={step}
+                                stepIndex={idx}
+                              />
+                            </div>
+                          ))}
+                        {step.kind === "tool" && (
+                          <div className="min-w-0 flex-1">
+                            <AgentExecutionStepCard
+                              step={step}
+                              stepIndex={idx}
+                              defaultExpanded={false}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
                 {/* Loading UI: show whenever execution is in progress (e.g. right after Enter) */}
                 {isExecuting && (
