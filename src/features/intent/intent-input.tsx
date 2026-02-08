@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
+  PopoverPortal,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -228,7 +229,8 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
                 <ChevronDown className="size-4 opacity-80" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" className="w-48 p-2">
+            <PopoverPortal>
+              <PopoverContent align="start" className="z-[100] w-48 p-2">
               <div className="flex flex-col gap-0.5">
                 <button
                   type="button"
@@ -264,6 +266,7 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
                 </button>
               </div>
             </PopoverContent>
+            </PopoverPortal>
           </Popover>
         )}
         <div className="relative min-h-12 flex-1">

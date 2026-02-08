@@ -222,18 +222,21 @@ Tools are registered from nine apps when the user is on **Home** or **Agent** vi
 
 ### whiteboard_draw_shape
 
-- **Parameters:** `shape` (string: `rectangle` \| `circle`), `x` (number), `y` (number), `width` (optional), `height` (optional)
-- **Example:** Draw a rectangle at (100, 100) with size 80×60.
+- **Parameters:** `shape` (string: `rectangle` \| `circle`), `x` (number), `y` (number), `width` (optional), `height` (optional), `color` (optional), `fillColor` (optional)
+- **Color:** Use a name (`black`, `red`, `blue`, `green`, `yellow`, `orange`, `purple`, `gray`, `white`) or hex (e.g. `#ff0000`). `color` = stroke/outline; `fillColor` = fill.
+- **Example:** Draw a red rectangle at (100, 100) with size 80×60 and blue fill: `whiteboard_draw_shape` with shape=rectangle, x=100, y=100, width=80, height=60, color=red, fillColor=blue.
 
 ### whiteboard_draw_line
 
-- **Parameters:** `shape` (string: `line` \| `arrow`), `x1` (number), `y1` (number), `x2` (number), `y2` (number)
-- **Example:** Draw an arrow from (50, 50) to (200, 100).
+- **Parameters:** `shape` (string: `line` \| `arrow`), `x1`, `y1`, `x2`, `y2`, `color` (optional)
+- **Color:** Same as above (name or hex).
+- **Example:** Draw a green arrow from (50, 50) to (200, 100): shape=arrow, x1=50, y1=50, x2=200, y2=100, color=green.
 
 ### whiteboard_add_text
 
-- **Parameters:** `text` (string), `x` (number), `y` (number)
-- **Example:** Add "Hello" at position (100, 100).
+- **Parameters:** `text` (string), `x` (number), `y` (number), `color` (optional)
+- **Color:** Same as above (name or hex).
+- **Example:** Add "Hello" in blue at (100, 100): text=Hello, x=100, y=100, color=blue.
 
 ### whiteboard_clear
 

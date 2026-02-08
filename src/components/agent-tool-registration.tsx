@@ -13,13 +13,7 @@ import { createEmailTools } from "@/apps/email/tools";
 import { createWhiteboardTools } from "@/apps/whiteboard/tools";
 import { createQuizTools } from "@/apps/quiz/tools";
 import type { AppId } from "@/lib/types";
-
-/**
- * Placeholder app instance id used when registering tools for the agent
- * when no workspace app window is open. UI updates (e.g. scroll, flash) will
- * no-op if the target element is not in the DOM.
- */
-const AGENT_PLACEHOLDER_ID = "agent-placeholder";
+import { AGENT_PLACEHOLDER_ID } from "@/lib/constants/agent-placeholder";
 
 /** Maps appId to its tools for placeholder registration. */
 const APP_TOOL_SETS: { appId: AppId; createTools: (id: string) => ReturnType<typeof createNotesTools> }[] = [

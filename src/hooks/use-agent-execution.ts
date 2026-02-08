@@ -130,6 +130,23 @@ function syncAgentNoteContent(toolName: string, result: ToolResult, args: Record
   useAgentStore.getState().setAgentNoteContent({ path, content });
 }
 
+/** When the agent writes to a file via code_editor_write, set last path and add to recent so Code Editor preview can open it. */
+function syncCodeEditorWritePath(toolName: string, result: ToolResult): void {
+  if (toolName !== "code_editor_write" || !result.success || !result.data) return;
+  const data = result.data as { path?: string };
+  const path = typeof data.path === "string" ? data.path : undefined;
+  if (!path) return;
+  useAgentStore.getState().setLastCodeEditorFilePath(path);
+  const state = useWorkspaceStore.getState();
+  const config = selectActiveWorkspaceConfig(state);
+  const codeEditorApp = config.apps.find((a) => a.type === "code-editor");
+  if (codeEditorApp) {
+    state.updateAppConfig(codeEditorApp.id, { filePath: path });
+  } else if (state.view === "agent") {
+    useAgentStore.getState().addPathToAgentRecentCodeEditorPaths(path);
+  }
+}
+
 export function useAgentExecution() {
   const getToolDefinitionsForAI = useToolRegistry((s) => s.getToolDefinitionsForAI);
   const getTool = useToolRegistry((s) => s.getTool);
@@ -161,6 +178,7 @@ export function useAgentExecution() {
       startExecution(intent);
       if (!continueInSession) {
         useAgentStore.getState().clearAgentRecentNotePaths();
+        useAgentStore.getState().clearAgentRecentCodeEditorPaths();
       }
       if (continueInSession && existingSession?.executionHistory?.length) {
         setExecutionHistory(existingSession.executionHistory);
@@ -264,6 +282,7 @@ export function useAgentExecution() {
                 syncCreatedNotePathToWorkspace(name, result);
                 syncAgentNoteContent(name, result, args as Record<string, unknown>);
                 syncAppendedNotePathToRecent(name, args as Record<string, unknown>);
+                syncCodeEditorWritePath(name, result);
                 runContinue(sessionId, name, result);
               })
               .catch((err) => {
@@ -357,6 +376,7 @@ export function useAgentExecution() {
                 syncCreatedNotePathToWorkspace(name, result);
                 syncAgentNoteContent(name, result, args);
                 syncAppendedNotePathToRecent(name, args);
+                syncCodeEditorWritePath(name, result);
                 if (!apiSessionId) {
                   addEventAndSync({
                     type: "error",

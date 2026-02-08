@@ -28,6 +28,10 @@ interface AgentState {
   agentRecentNotePaths: string[];
   /** Content written by agent to a note - Notes app syncs this to display. Cleared after consumption. */
   agentNoteContent: { path: string; content: string } | null;
+  /** Last code editor file path written by agent (so Code Editor preview can open it). */
+  lastCodeEditorFilePath: string | null;
+  /** Recent code editor paths from this agent session (used by Code Editor preview when workspace has no Code Editor app). */
+  agentRecentCodeEditorPaths: string[];
 
   startExecution: (intent: string) => void;
   /** Seed execution history (e.g. when continuing in same session). Call after startExecution. */
@@ -45,6 +49,11 @@ interface AgentState {
   /** Clear agent recent note paths (e.g. when starting a new agent task). */
   clearAgentRecentNotePaths: () => void;
   setAgentNoteContent: (payload: { path: string; content: string } | null) => void;
+  setLastCodeEditorFilePath: (path: string | null) => void;
+  /** Add a path to agent recent code editor paths (MRU, max 20). Used when agent writes and preview has no workspace Code Editor app. */
+  addPathToAgentRecentCodeEditorPaths: (path: string) => void;
+  /** Clear agent recent code editor paths (e.g. when starting a new agent task). */
+  clearAgentRecentCodeEditorPaths: () => void;
   /** Bump agentDataVersion so file-based apps (e.g. whiteboard) refetch. */
   incrementAgentDataVersion: () => void;
 }
@@ -62,6 +71,8 @@ export const useAgentStore = create<AgentState>((set) => ({
   lastCreatedNotePath: null,
   agentRecentNotePaths: [],
   agentNoteContent: null,
+  lastCodeEditorFilePath: null,
+  agentRecentCodeEditorPaths: [],
 
   startExecution: (intent) =>
     set({
@@ -114,6 +125,13 @@ export const useAgentStore = create<AgentState>((set) => ({
     }),
   clearAgentRecentNotePaths: () => set({ agentRecentNotePaths: [] }),
   setAgentNoteContent: (payload) => set({ agentNoteContent: payload }),
+  setLastCodeEditorFilePath: (path) => set({ lastCodeEditorFilePath: path }),
+  addPathToAgentRecentCodeEditorPaths: (path) =>
+    set((s) => {
+      const rest = s.agentRecentCodeEditorPaths.filter((p) => p !== path);
+      return { agentRecentCodeEditorPaths: [path, ...rest].slice(0, 20) };
+    }),
+  clearAgentRecentCodeEditorPaths: () => set({ agentRecentCodeEditorPaths: [] }),
   incrementAgentDataVersion: () =>
     set((s) => ({ agentDataVersion: s.agentDataVersion + 1 })),
 }));

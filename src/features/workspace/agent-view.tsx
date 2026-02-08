@@ -96,6 +96,8 @@ export function AgentView() {
   const streamingThinking = useAgentStore((s) => s.streamingThinking);
   const lastCreatedNotePath = useAgentStore((s) => s.lastCreatedNotePath);
   const agentRecentNotePaths = useAgentStore((s) => s.agentRecentNotePaths);
+  const lastCodeEditorFilePath = useAgentStore((s) => s.lastCodeEditorFilePath);
+  const agentRecentCodeEditorPaths = useAgentStore((s) => s.agentRecentCodeEditorPaths);
 
   const { executeIntent } = useAgentExecution();
 
@@ -252,9 +254,21 @@ export function AgentView() {
           }
         : displayedAppId === "whiteboard"
           ? { filePath: "/whiteboard/default.json" }
-          : {};
+          : displayedAppId === "code-editor" &&
+              (lastCodeEditorFilePath || agentRecentCodeEditorPaths.length > 0)
+            ? {
+                filePath: lastCodeEditorFilePath ?? agentRecentCodeEditorPaths[0],
+              }
+            : {};
     return { id: `agent-preview-${displayedAppId}`, config: previewConfig };
-  }, [displayedAppId, workspace.apps, lastCreatedNotePath, agentRecentNotePaths]);
+  }, [
+    displayedAppId,
+    workspace.apps,
+    lastCreatedNotePath,
+    agentRecentNotePaths,
+    lastCodeEditorFilePath,
+    agentRecentCodeEditorPaths,
+  ]);
 
   // Resizable split: drag to update ratio
   const handleSplitPointerDown = useCallback((e: React.PointerEvent) => {

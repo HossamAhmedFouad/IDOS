@@ -5,6 +5,27 @@ import type { AppTool } from "@/lib/types/agent";
 
 const DEFAULT_PATH = "/whiteboard/default.json";
 
+/** Named colors the agent can choose; also accepts any hex string (e.g. #ff0000). */
+const NAMED_COLORS: Record<string, string> = {
+  black: "#1e1e1e",
+  red: "#e03131",
+  blue: "#1971c2",
+  green: "#2f9e44",
+  yellow: "#f59f00",
+  orange: "#e67700",
+  purple: "#9c36b5",
+  gray: "#868e96",
+  white: "#ffffff",
+};
+
+function resolveColor(value: unknown): string | undefined {
+  if (value == null || value === "") return undefined;
+  const s = String(value).trim().toLowerCase();
+  if (NAMED_COLORS[s]) return NAMED_COLORS[s];
+  if (/^#[0-9a-f]{6}$/i.test(s)) return s;
+  return undefined;
+}
+
 /** Lazy-load Excalidraw (uses window, breaks SSR) */
 async function getExcalidraw() {
   const mod = await import("@excalidraw/excalidraw");
@@ -30,7 +51,7 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
     {
       name: "whiteboard_draw_shape",
       description:
-        "Draw exactly one shape on the whiteboard (rectangle or circle). Call this tool ONCE per shape — e.g. for 'draw a rectangle' call it once with shape=rectangle.",
+        "Draw exactly one shape on the whiteboard (rectangle or circle). Call this tool ONCE per shape — e.g. for 'draw a rectangle' call it once with shape=rectangle. You can choose a stroke and fill color.",
       appId: "whiteboard",
       parameters: {
         type: "object",
@@ -44,6 +65,16 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
           y: { type: "number", description: "Y position in pixels" },
           width: { type: "number", description: "Width in pixels (optional)" },
           height: { type: "number", description: "Height in pixels (optional)" },
+          color: {
+            type: "string",
+            description:
+              "Stroke/outline color. Use a name (black, red, blue, green, yellow, orange, purple, gray, white) or hex (e.g. #ff0000). Optional.",
+          },
+          fillColor: {
+            type: "string",
+            description:
+              "Fill color for the shape. Same options as color. Optional; if omitted, default fill is used.",
+          },
         },
         required: ["shape", "x", "y"],
       },
@@ -53,6 +84,8 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
         const y = Number(params.y) ?? 100;
         const width = Number(params.width) ?? 80;
         const height = Number(params.height) ?? 60;
+        const strokeColor = resolveColor(params.color);
+        const backgroundColor = resolveColor(params.fillColor);
 
         const excalidrawType = shape === "circle" ? "ellipse" : shape;
         const skeleton: Record<string, unknown> = {
@@ -62,6 +95,8 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
           width,
           height,
         };
+        if (strokeColor) skeleton.strokeColor = strokeColor;
+        if (backgroundColor) skeleton.backgroundColor = backgroundColor;
 
         await appendElementsToWhiteboard(DEFAULT_PATH, [skeleton]);
 
@@ -74,7 +109,7 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
     {
       name: "whiteboard_draw_line",
       description:
-        "Draw a line or arrow on the whiteboard from (x1,y1) to (x2,y2). Call once per line/arrow.",
+        "Draw a line or arrow on the whiteboard from (x1,y1) to (x2,y2). Call once per line/arrow. You can choose a color for the line.",
       appId: "whiteboard",
       parameters: {
         type: "object",
@@ -88,6 +123,11 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
           y1: { type: "number", description: "Start Y in pixels" },
           x2: { type: "number", description: "End X in pixels" },
           y2: { type: "number", description: "End Y in pixels" },
+          color: {
+            type: "string",
+            description:
+              "Line color. Use a name (black, red, blue, green, yellow, orange, purple, gray, white) or hex (e.g. #ff0000). Optional.",
+          },
         },
         required: ["shape", "x1", "y1", "x2", "y2"],
       },
@@ -97,6 +137,7 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
         const y1 = Number(params.y1) ?? 0;
         const x2 = Number(params.x2) ?? 100;
         const y2 = Number(params.y2) ?? 0;
+        const strokeColor = resolveColor(params.color);
 
         const skeleton: Record<string, unknown> = {
           type: shape,
@@ -107,6 +148,7 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
             [x2 - x1, y2 - y1],
           ],
         };
+        if (strokeColor) skeleton.strokeColor = strokeColor;
 
         await appendElementsToWhiteboard(DEFAULT_PATH, [skeleton]);
 
@@ -119,7 +161,7 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
     {
       name: "whiteboard_add_text",
       description:
-        "Add exactly one text label to the whiteboard. Call this tool ONCE per label — e.g. for 'add text Ideas' call it once with text='Ideas'.",
+        "Add exactly one text label to the whiteboard. Call this tool ONCE per label — e.g. for 'add text Ideas' call it once with text='Ideas'. You can choose a text color.",
       appId: "whiteboard",
       parameters: {
         type: "object",
@@ -127,6 +169,11 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
           text: { type: "string", description: "Text content" },
           x: { type: "number", description: "X position in pixels" },
           y: { type: "number", description: "Y position in pixels" },
+          color: {
+            type: "string",
+            description:
+              "Text color. Use a name (black, red, blue, green, yellow, orange, purple, gray, white) or hex (e.g. #ff0000). Optional.",
+          },
         },
         required: ["text", "x", "y"],
       },
@@ -136,7 +183,14 @@ export function createWhiteboardTools(appInstanceId: string): AppTool[] {
         const y = Number(params.y) ?? 100;
         if (!text) return { success: false, error: "text is required" };
 
-        const skeleton = { type: "text" as const, x, y, text };
+        const strokeColor = resolveColor(params.color);
+        const skeleton: Record<string, unknown> = {
+          type: "text",
+          x,
+          y,
+          text,
+        };
+        if (strokeColor) skeleton.strokeColor = strokeColor;
         await appendElementsToWhiteboard(DEFAULT_PATH, [skeleton]);
 
         return {

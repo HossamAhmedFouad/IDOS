@@ -4,7 +4,8 @@
  */
 
 import type { AppSpecificUIUpdate } from "@/lib/types/uiUpdates";
-import { getCodeEditorBridge } from "@/lib/code-editor-bridge";
+import { getCodeEditorBridge, type CodeEditorBridge } from "@/lib/code-editor-bridge";
+import { AGENT_PLACEHOLDER_ID } from "@/lib/constants/agent-placeholder";
 
 export type OnBeforeNextUpdateCallback = (nextUpdate: AppSpecificUIUpdate) => void | Promise<void>;
 
@@ -165,6 +166,9 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "notes_typewriter" }>
   ): Promise<void> {
+    // In Agent view, content is synced via agentNoteContent; skip DOM update to avoid overwriting the placeholder.
+    if (element.id === AGENT_PLACEHOLDER_ID) return;
+
     const speed = update.speed ?? 50;
     const delay = 1000 / speed;
     const content = update.content;
@@ -199,6 +203,8 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "notes_append_scroll" }>
   ): Promise<void> {
+    if (element.id === AGENT_PLACEHOLDER_ID) return;
+
     const contentEl = element.querySelector("[data-note-content]") || element;
     const newContent = document.createElement("div");
     newContent.textContent = update.content;
@@ -216,6 +222,8 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "notes_file_create_animation" }>
   ): Promise<void> {
+    if (element.id === AGENT_PLACEHOLDER_ID) return;
+
     const fileIcon = document.createElement("div");
     fileIcon.className = "file-create-animation";
     fileIcon.innerHTML = `
@@ -245,6 +253,8 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "notes_search_highlight" }>
   ): Promise<void> {
+    if (element.id === AGENT_PLACEHOLDER_ID) return;
+
     const contentEl = element.querySelector("[data-note-content]") || element;
     for (const match of update.matches) {
       const lineEl = contentEl.querySelector(`[data-line="${match.line}"]`);
@@ -498,15 +508,35 @@ export class UIUpdateExecutor {
 
   // ----- Code Editor -----
 
+  /** Wait for the code editor bridge to register (e.g. Agent view app mounting). Polls up to ~2s. */
+  private async waitForCodeEditorBridge(targetId: string): Promise<CodeEditorBridge | undefined> {
+    const pollMs = 50;
+    const maxWaitMs = 2000;
+    const maxAttempts = Math.ceil(maxWaitMs / pollMs);
+    for (let i = 0; i < maxAttempts; i++) {
+      const bridge = getCodeEditorBridge(targetId);
+      if (bridge) return bridge;
+      await this.sleep(pollMs);
+    }
+    return undefined;
+  }
+
   private async codeEditorTypeCode(
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "code_editor_type_code" }>
   ): Promise<void> {
-    const bridge = getCodeEditorBridge(element.id);
+    let bridge = getCodeEditorBridge(element.id);
+    if (!bridge && element.id === AGENT_PLACEHOLDER_ID) {
+      bridge = await this.waitForCodeEditorBridge(element.id);
+    }
     if (bridge) {
       bridge.setContent(update.code);
       return;
     }
+
+    // Only use DOM fallback when we have a real workspace code editor (not agent placeholder).
+    // Otherwise skip so we don't overwrite the CodeMirror area with plain text.
+    if (element.id === AGENT_PLACEHOLDER_ID) return;
 
     const editorEl = element.querySelector("[data-code-editor]") || element;
     const textarea = editorEl.querySelector("textarea");
@@ -542,7 +572,10 @@ export class UIUpdateExecutor {
     element: HTMLElement,
     update: Extract<AppSpecificUIUpdate, { type: "code_editor_line_highlight" }>
   ): Promise<void> {
-    const bridge = getCodeEditorBridge(element.id);
+    let bridge = getCodeEditorBridge(element.id);
+    if (!bridge && element.id === AGENT_PLACEHOLDER_ID) {
+      bridge = await this.waitForCodeEditorBridge(element.id);
+    }
     const color = update.color ?? "oklch(0.75 0.15 85 / 0.4)";
     const duration = update.duration ?? 2000;
 
@@ -550,6 +583,9 @@ export class UIUpdateExecutor {
       bridge.setLineHighlight(update.lineNumbers, color, duration);
       return;
     }
+
+    // Skip DOM fallback for agent placeholder so we don't touch the CodeMirror area.
+    if (element.id === AGENT_PLACEHOLDER_ID) return;
 
     const editorEl = element.querySelector("[data-code-editor]") || element;
 

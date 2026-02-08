@@ -22,6 +22,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { java } from "@codemirror/lang-java";
 import { python } from "@codemirror/lang-python";
 import { registerCodeEditorBridge, unregisterCodeEditorBridge } from "@/lib/code-editor-bridge";
+import { AGENT_PLACEHOLDER_ID } from "@/lib/constants/agent-placeholder";
 import {
   lineHighlightField,
   setLineHighlight as setLineHighlightCmd,
@@ -208,6 +209,9 @@ export function CodeEditorApp({ id, config }: AppProps) {
   useEffect(() => {
     return () => {
       unregisterCodeEditorBridge(id);
+      if (id.startsWith("agent-preview-")) {
+        unregisterCodeEditorBridge(AGENT_PLACEHOLDER_ID);
+      }
       if (lineHighlightTimeoutRef.current) clearTimeout(lineHighlightTimeoutRef.current);
     };
   }, [id]);
@@ -215,7 +219,7 @@ export function CodeEditorApp({ id, config }: AppProps) {
   const handleCreateEditor = useCallback(
     (view: import("@codemirror/view").EditorView) => {
       editorViewRef.current = view;
-      registerCodeEditorBridge(id, {
+      const bridge = {
         setContent(content: string) {
           const v = editorViewRef.current;
           if (!v) return;
@@ -235,7 +239,11 @@ export function CodeEditorApp({ id, config }: AppProps) {
             lineHighlightTimeoutRef.current = null;
           }, durationMs);
         },
-      });
+      };
+      registerCodeEditorBridge(id, bridge);
+      if (id.startsWith("agent-preview-")) {
+        registerCodeEditorBridge(AGENT_PLACEHOLDER_ID, bridge);
+      }
     },
     [id]
   );

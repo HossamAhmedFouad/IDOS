@@ -334,10 +334,7 @@ export function HomeView() {
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       )}
                     >
-                      <span className="absolute right-2 top-2 font-mono text-[10px] text-muted-foreground/60">
-                        {["∑", "√", "∞"][i]}
-                      </span>
-                      <p className="pr-6 text-sm font-medium text-foreground group-hover:text-primary">
+                      <p className="text-sm font-medium text-foreground group-hover:text-primary">
                         {prompt}
                       </p>
                     </motion.button>
