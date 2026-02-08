@@ -24,6 +24,8 @@ interface AgentState {
   agentDataVersion: number;
   /** Last note path created by agent (so Notes app in agent preview can load it when navigating back). */
   lastCreatedNotePath: string | null;
+  /** Content written by agent to a note - Notes app syncs this to display. Cleared after consumption. */
+  agentNoteContent: { path: string; content: string } | null;
 
   startExecution: (intent: string) => void;
   /** Seed execution history (e.g. when continuing in same session). Call after startExecution. */
@@ -36,6 +38,7 @@ interface AgentState {
   closeAgentRunDialog: () => void;
   setHomeAgentMode: (v: boolean) => void;
   setLastCreatedNotePath: (path: string | null) => void;
+  setAgentNoteContent: (payload: { path: string; content: string } | null) => void;
   /** Bump agentDataVersion so file-based apps (e.g. whiteboard) refetch. */
   incrementAgentDataVersion: () => void;
 }
@@ -51,6 +54,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   homeAgentMode: false,
   agentDataVersion: 0,
   lastCreatedNotePath: null,
+  agentNoteContent: null,
 
   startExecution: (intent) =>
     set({
@@ -96,6 +100,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   closeAgentRunDialog: () => set({ agentRunDialogOpen: false }),
   setHomeAgentMode: (v) => set({ homeAgentMode: v }),
   setLastCreatedNotePath: (path) => set({ lastCreatedNotePath: path }),
+  setAgentNoteContent: (payload) => set({ agentNoteContent: payload }),
   incrementAgentDataVersion: () =>
     set((s) => ({ agentDataVersion: s.agentDataVersion + 1 })),
 }));

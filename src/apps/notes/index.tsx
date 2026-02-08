@@ -71,11 +71,22 @@ export function NotesApp({ id, config }: AppProps) {
 
   const view = useWorkspaceStore((s) => s.view);
   const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  const agentNoteContent = useAgentStore((s) => s.agentNoteContent);
+  const setAgentNoteContent = useAgentStore((s) => s.setAgentNoteContent);
+
   useEffect(() => {
     if (view === "agent" && agentDataVersion > 0 && filePath) {
       loadContent(filePath);
     }
   }, [view, agentDataVersion, filePath, loadContent]);
+
+  // Sync agent-written content so it appears in the Notes app (avoids React controlled-component overwriting typewriter DOM updates)
+  useEffect(() => {
+    if (agentNoteContent && filePath && agentNoteContent.path === filePath) {
+      setContent(agentNoteContent.content);
+      setAgentNoteContent(null);
+    }
+  }, [agentNoteContent, filePath, setAgentNoteContent]);
 
   useEffect(() => {
     return () => {

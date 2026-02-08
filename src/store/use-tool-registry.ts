@@ -10,6 +10,7 @@ interface ToolRegistryState {
   unregisterTool: (toolName: string) => void;
   getToolsForApp: (appId: string) => AppTool[];
   getAllTools: () => AppTool[];
+  getTool: (toolName: string) => AppTool | undefined;
   getToolDefinitionsForAI: () => ToolDefinitionForAI[];
 }
 
@@ -37,6 +38,8 @@ export const useToolRegistry = create<ToolRegistryState>((set, get) => ({
   getAllTools: () => {
     return Array.from(get().tools.values());
   },
+
+  getTool: (toolName) => get().tools.get(toolName),
 
   getToolDefinitionsForAI: () => {
     return Array.from(get().tools.values()).map((tool) => ({

@@ -81,14 +81,25 @@ function syncCreatedNotePathToWorkspace(toolName: string, result: ToolResult): v
   const notesApp = config.apps.find((a) => a.type === "notes");
   if (notesApp) {
     state.updateAppConfig(notesApp.id, { filePath: path });
-  } else {
+  } else if (state.view !== "agent") {
+    // In Agent view, don't add a new app — it would spawn a floating window that blocks the UI. The left pane shows a preview instead.
     state.addApp("notes", { filePath: path });
   }
 }
 
+/** Sync agent-written note content to the store so the Notes app can display it (avoids React controlled-component overwriting typewriter). */
+function syncAgentNoteContent(toolName: string, result: ToolResult, args: Record<string, unknown>): void {
+  if (toolName !== "notes_create_note" || !result.success || !result.data) return;
+  const data = result.data as { path?: string };
+  const path = typeof data.path === "string" ? data.path : undefined;
+  if (!path) return;
+  const content = String(args.content ?? "").trim();
+  useAgentStore.getState().setAgentNoteContent({ path, content });
+}
+
 export function useAgentExecution() {
   const getToolDefinitionsForAI = useToolRegistry((s) => s.getToolDefinitionsForAI);
-  const getAllTools = useToolRegistry((s) => s.getAllTools);
+  const getTool = useToolRegistry((s) => s.getTool);
   const startExecution = useAgentStore((s) => s.startExecution);
   const setExecutionHistory = useAgentStore((s) => s.setExecutionHistory);
   const incrementAgentDataVersion = useAgentStore((s) => s.incrementAgentDataVersion);
@@ -101,8 +112,6 @@ export function useAgentExecution() {
   const executeIntent = useCallback(
     async (intent: string, options?: { continueInSession?: boolean }) => {
       const toolDefinitions = getToolDefinitionsForAI();
-      const tools = getAllTools();
-      const toolsByName = new Map(tools.map((t) => [t.name, t]));
 
       const sessionsState = useAgentSessionsStore.getState();
       const activeId = sessionsState.activeAgentSessionId;
@@ -193,7 +202,7 @@ export function useAgentExecution() {
             const d = data as { toolName?: string; args?: Record<string, unknown> };
             const name = d?.toolName;
             const args = d?.args ?? {};
-            const tool = name ? toolsByName.get(name) : undefined;
+            const tool = name ? getTool(name) : undefined;
             if (!name || !tool) {
               addEventAndSync({
                 type: "error",
@@ -213,6 +222,7 @@ export function useAgentExecution() {
                 if (result.multipleUpdates?.length)
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
+                syncAgentNoteContent(name, result, args as Record<string, unknown>);
                 runContinue(sessionId, name, result);
               })
               .catch((err) => {
@@ -284,7 +294,7 @@ export function useAgentExecution() {
           if (eventType === "tool-call") {
             const name = payload?.toolName as string | undefined;
             const args = (payload?.args as Record<string, unknown>) ?? {};
-            const tool = name ? toolsByName.get(name) : undefined;
+            const tool = name ? getTool(name) : undefined;
             if (!name || !tool) {
               addEventAndSync({
                 type: "error",
@@ -304,6 +314,7 @@ export function useAgentExecution() {
                 if (result.multipleUpdates?.length)
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
+                syncAgentNoteContent(name, result, args);
                 if (!apiSessionId) {
                   addEventAndSync({
                     type: "error",
@@ -335,7 +346,7 @@ export function useAgentExecution() {
     },
     [
       getToolDefinitionsForAI,
-      getAllTools,
+      getTool,
       startExecution,
       setExecutionHistory,
       addEvent,

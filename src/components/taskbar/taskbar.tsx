@@ -80,6 +80,7 @@ export function Taskbar() {
   };
 
   const handleAppClick = (appId: AppId) => {
+    if (view === "agent") return; // Agent opens apps; no manual open in Agent Mode
     const minimizedOfType = workspace.apps.filter(
       (a) => a.type === appId && minimizedAppIds.includes(a.id)
     );
@@ -132,10 +133,12 @@ export function Taskbar() {
             "flex size-14 shrink-0 items-center justify-center rounded-xl transition-colors -ml-2 mr-2",
             pickerOpen
               ? "bg-primary/20 text-primary"
-              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            view === "agent" && "pointer-events-none opacity-50"
           )}
-          onClick={() => setPickerOpen(true)}
+          onClick={() => view !== "agent" && setPickerOpen(true)}
           aria-label="All apps"
+          aria-disabled={view === "agent"}
         >
           <LayoutGrid className="size-7" />
         </motion.button>
@@ -160,7 +163,8 @@ export function Taskbar() {
                 "flex size-14 items-center justify-center rounded-xl transition-colors",
                 isActive
                   ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                view === "agent" && "pointer-events-none opacity-50"
               )}
               onClick={() => handleAppClick(app.id)}
               title={hasMinimized ? `Restore ${app.name}` : app.name}
