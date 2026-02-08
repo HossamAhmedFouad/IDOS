@@ -169,8 +169,6 @@ export class UIUpdateExecutor {
     // In Agent view, content is synced via agentNoteContent; skip DOM update to avoid overwriting the placeholder.
     if (element.id === AGENT_PLACEHOLDER_ID) return;
 
-    const speed = update.speed ?? 50;
-    const delay = 1000 / speed;
     const content = update.content;
     const contentEl = (element.querySelector("[data-note-content]") || element) as HTMLElement;
     const editable =
@@ -178,25 +176,12 @@ export class UIUpdateExecutor {
         ? contentEl
         : (contentEl.querySelector("textarea, input") as HTMLTextAreaElement | HTMLInputElement | null) ?? contentEl;
 
-    if (update.cursor) {
-      editable.classList.add("typing-cursor");
+    if (editable instanceof HTMLInputElement || editable instanceof HTMLTextAreaElement) {
+      editable.value = content;
+    } else {
+      editable.textContent = content;
     }
-
-    let currentText = "";
-    for (let i = 0; i < content.length; i++) {
-      currentText += content[i];
-      if (editable instanceof HTMLInputElement || editable instanceof HTMLTextAreaElement) {
-        editable.value = currentText;
-      } else {
-        editable.textContent = currentText;
-      }
-      editable.scrollTop = editable.scrollHeight;
-      await this.sleep(delay);
-    }
-
-    if (update.cursor) {
-      editable.classList.remove("typing-cursor");
-    }
+    editable.scrollTop = editable.scrollHeight;
   }
 
   private async notesAppendScroll(

@@ -21,8 +21,7 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
           content: { type: "string", description: "Note content" },
           animated: {
             type: "boolean",
-            description:
-              "Use typewriter effect so the user sees content being written (default: true for better UX)",
+            description: "Unused; content always updates instantly (no typewriter). Kept for API compatibility.",
           },
         },
         required: ["filename", "content"],
@@ -32,24 +31,16 @@ export function createNotesTools(appInstanceId: string): AppTool[] {
         const content = String(params.content ?? "");
         const path = `${NOTES_PREFIX}/${filename}`;
         await writeFile(path, content);
-        const animated = params.animated !== false;
         return {
           success: true,
           data: { path },
-          uiUpdate: animated
-            ? {
-                type: "notes_typewriter",
-                targetId: appInstanceId,
-                content,
-                speed: 35,
-                cursor: true,
-              }
-            : {
-                type: "notes_file_create_animation",
-                targetId: appInstanceId,
-                filename,
-                position: { x: typeof window !== "undefined" ? window.innerWidth / 2 : 0, y: 100 },
-              },
+          uiUpdate: {
+            type: "notes_typewriter",
+            targetId: appInstanceId,
+            content,
+            speed: 35,
+            cursor: false,
+          },
         };
       },
     },
