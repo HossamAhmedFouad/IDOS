@@ -515,7 +515,7 @@ export class UIUpdateExecutor {
       bridge = await this.waitForCodeEditorBridge(element.id);
     }
     if (bridge) {
-      bridge.setContent(update.code);
+      bridge.setContent(update.code, update.path);
       return;
     }
 

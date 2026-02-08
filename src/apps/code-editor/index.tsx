@@ -12,12 +12,20 @@ import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { useToolRegistry } from "@/store/use-tool-registry";
 import { useAgentStore } from "@/store/use-agent-store";
 import { FileTree } from "./file-tree";
-import { X, FolderOpen, FolderPlus } from "lucide-react";
+import { X, FolderOpen, FolderPlus, Play, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FolderPickerDialog } from "@/components/file-picker";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { createCodeEditorTools } from "./tools";
 import { Button } from "@/components/ui/button";
 import CodeMirror from "@uiw/react-codemirror";
+import { html } from "@codemirror/lang-html";
 import { javascript } from "@codemirror/lang-javascript";
 import { java } from "@codemirror/lang-java";
 import { python } from "@codemirror/lang-python";
@@ -32,8 +40,14 @@ import {
 const DEFAULT_DIRECTORY = "/code";
 const SIDEBAR_WIDTH = 280;
 
+function isHtmlFile(path: string): boolean {
+  const ext = path.replace(/^.*\./, "").toLowerCase();
+  return ext === "html" || ext === "htm";
+}
+
 function languageFromPath(path: string) {
   const ext = path.replace(/^.*\./, "").toLowerCase();
+  if (ext === "html" || ext === "htm") return html;
   if (ext === "js" || ext === "jsx" || ext === "ts" || ext === "tsx" || ext === "mjs" || ext === "cjs") return javascript;
   if (ext === "java") return java;
   if (ext === "py" || ext === "pyw") return python;
@@ -71,6 +85,11 @@ export function CodeEditorApp({ id, config }: AppProps) {
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const editorViewRef = useRef<import("@codemirror/view").EditorView | null>(null);
   const lineHighlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const activeFileRef = useRef<string | null>(null);
+  activeFileRef.current = activeFile;
+  const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
+  const [htmlPreviewContent, setHtmlPreviewContent] = useState("");
+  const [fileTreeRefreshTrigger, setFileTreeRefreshTrigger] = useState(0);
 
   const ensureDirectoryExists = useCallback(async () => {
     try {
@@ -220,11 +239,29 @@ export function CodeEditorApp({ id, config }: AppProps) {
     };
   }, [id]);
 
+  const handleHtmlRun = useCallback(() => {
+    setHtmlPreviewContent(currentContent);
+    setHtmlPreviewOpen(true);
+  }, [currentContent]);
+
+  const handleHtmlStop = useCallback(() => {
+    setHtmlPreviewOpen(false);
+  }, []);
+
   const handleCreateEditor = useCallback(
     (view: import("@codemirror/view").EditorView) => {
       editorViewRef.current = view;
       const bridge = {
-        setContent(content: string) {
+        setContent(content: string, path?: string) {
+          const targetPath = path ?? activeFileRef.current;
+          if (targetPath) {
+            setContentByPath((prev) => ({ ...prev, [targetPath]: content }));
+            if (path) {
+              setOpenFiles((prev) => (prev.includes(path) ? prev : [...prev, path]));
+              setActiveFile(path);
+              setFileTreeRefreshTrigger((t) => t + 1);
+            }
+          }
           const v = editorViewRef.current;
           if (!v) return;
           const len = v.state.doc.length;
@@ -295,6 +332,7 @@ export function CodeEditorApp({ id, config }: AppProps) {
           rootPath={directoryPath}
           onOpenFile={handleOpenFile}
           selectedPath={activeFile}
+          refreshTrigger={fileTreeRefreshTrigger}
         />
       </div>
       <FolderPickerDialog
@@ -358,6 +396,33 @@ export function CodeEditorApp({ id, config }: AppProps) {
           )}
           {openFiles.length > 0 && (
             <div className="ml-auto flex items-center gap-2 px-3 py-1.5">
+              {activeFile && isHtmlFile(activeFile) && (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={handleHtmlRun}
+                    title="Run HTML preview"
+                  >
+                    <Play className="size-3.5" />
+                    Run
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-7 gap-1.5 text-xs"
+                    onClick={handleHtmlStop}
+                    disabled={!htmlPreviewOpen}
+                    title="Close HTML preview"
+                  >
+                    <Square className="size-3.5" />
+                    Stop
+                  </Button>
+                </>
+              )}
               {saveStatus === "saving" && (
                 <span className="text-xs text-muted-foreground">Saving...</span>
               )}
@@ -377,6 +442,7 @@ export function CodeEditorApp({ id, config }: AppProps) {
           {activeFile ? (
             <div className="flex-1 min-h-0 overflow-hidden [&_.cm-editor]:h-full [&_.cm-scroller]:overflow-auto">
               <CodeMirror
+                key={activeFile}
                 value={currentContent}
                 height="100%"
                 className="h-full border-0 rounded-none code-editor-codemirror"
@@ -396,6 +462,32 @@ export function CodeEditorApp({ id, config }: AppProps) {
           )}
         </div>
       </div>
+      <Dialog open={htmlPreviewOpen} onOpenChange={setHtmlPreviewOpen}>
+        <DialogContent className="max-w-[90vw] w-full h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
+          <DialogHeader className="shrink-0 flex-row items-center justify-between gap-2 border-b border-border px-4 py-2">
+            <DialogTitle className="text-sm">HTML Preview</DialogTitle>
+            <DialogClose asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0"
+                aria-label="Close preview"
+              >
+                <X className="size-4" />
+              </Button>
+            </DialogClose>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 overflow-hidden bg-background">
+            <iframe
+              title="HTML preview"
+              sandbox="allow-scripts allow-same-origin"
+              srcDoc={htmlPreviewContent}
+              className="w-full h-full border-0"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

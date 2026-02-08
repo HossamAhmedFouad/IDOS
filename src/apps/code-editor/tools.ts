@@ -134,9 +134,10 @@ export function createCodeEditorTools(appInstanceId: string): AppTool[] {
         const animated = params.animated !== false;
         const lines = content.split("\n");
         const startLine = 1;
+        const normalizedPath = normalizePath(path);
         return {
           success: true,
-          data: { path },
+          data: { path: normalizedPath },
           uiUpdate: animated
             ? {
                 type: "code_editor_type_code",
@@ -145,6 +146,7 @@ export function createCodeEditorTools(appInstanceId: string): AppTool[] {
                 startLine,
                 speed: 35,
                 syntaxHighlight: false,
+                path: normalizedPath,
               }
             : {
                 type: "code_editor_line_highlight",

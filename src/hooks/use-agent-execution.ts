@@ -307,13 +307,13 @@ export function useAgentExecution() {
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
+                syncCodeEditorWritePath(name, result);
                 if (result.uiUpdate) void uiUpdateExecutor.execute(result.uiUpdate);
                 if (result.multipleUpdates?.length)
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
                 syncAgentNoteContent(name, result, args as Record<string, unknown>);
                 syncAppendedNotePathToRecent(name, args as Record<string, unknown>);
-                syncCodeEditorWritePath(name, result);
                 runContinue(sessionId, name, result);
               })
               .catch((err) => {
@@ -422,13 +422,13 @@ export function useAgentExecution() {
                   type: "tool-result",
                   data: { toolName: name, args, result, uiUpdate: result.uiUpdate },
                 });
+                syncCodeEditorWritePath(name, result);
                 if (result.uiUpdate) void uiUpdateExecutor.execute(result.uiUpdate);
                 if (result.multipleUpdates?.length)
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
                 syncAgentNoteContent(name, result, args);
                 syncAppendedNotePathToRecent(name, args);
-                syncCodeEditorWritePath(name, result);
                 if (!apiSessionId) {
                   addEventAndSync({
                     type: "error",

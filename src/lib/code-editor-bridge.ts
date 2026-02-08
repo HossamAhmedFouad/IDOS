@@ -4,7 +4,8 @@
  */
 
 export interface CodeEditorBridge {
-  setContent(content: string): void;
+  /** Set editor content. If path is provided, open that file and set its content (used when agent creates 2nd/3rd file). */
+  setContent(content: string, path?: string): void;
   setLineHighlight(lineNumbers: number[], color: string, durationMs: number): void;
 }
 

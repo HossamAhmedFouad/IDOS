@@ -151,6 +151,8 @@ export type CodeEditorUIUpdate =
       startLine: number;
       speed?: number;
       syntaxHighlight?: boolean;
+      /** File path this content is for; when set, code editor will open this file and apply content (fixes 2nd/3rd file blank). */
+      path?: string;
     }
   | {
       type: "code_editor_line_highlight";

@@ -13,6 +13,8 @@ export interface FileTreeProps {
   rootPath: string;
   onOpenFile: (path: string) => void;
   selectedPath: string | null;
+  /** When this value changes, the tree will re-fetch the root directory (e.g. after agent creates a file). */
+  refreshTrigger?: number;
 }
 
 interface FileEntry {
@@ -140,7 +142,7 @@ function TreeNode({
   );
 }
 
-export function FileTree({ rootPath, onOpenFile, selectedPath }: FileTreeProps) {
+export function FileTree({ rootPath, onOpenFile, selectedPath, refreshTrigger }: FileTreeProps) {
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -175,7 +177,7 @@ export function FileTree({ rootPath, onOpenFile, selectedPath }: FileTreeProps) 
 
   useEffect(() => {
     loadRoot();
-  }, [loadRoot]);
+  }, [loadRoot, refreshTrigger]);
 
   const handleToggleExpand = useCallback((path: string) => {
     setExpandedDirs((prev) => {
