@@ -41,13 +41,21 @@ export function AgentExecutionStepCard({
     const e = step.event;
     if (e.type === "agent-start") return null;
     if (e.type === "user-message") {
-      const d = e.data as { message?: string };
+      const d = e.data as { message?: string; attachedFilePaths?: string[] };
+      const paths = Array.isArray(d.attachedFilePaths) ? d.attachedFilePaths : [];
       return (
         <div className="rounded-lg border border-primary/40 bg-primary/10 p-2.5">
           <div className="mb-0.5 text-xs font-medium text-primary">Message</div>
           <div className="text-sm text-foreground">
             <MarkdownContent content={d.message ?? ""} />
           </div>
+          {paths.length > 0 && (
+            <div className="mt-1.5 text-xs text-muted-foreground">
+              {paths.length === 1
+                ? `Attachment: ${paths[0].split("/").pop() ?? paths[0]}`
+                : `${paths.length} files attached: ${paths.map((p) => p.split("/").pop() ?? p).join(", ")}`}
+            </div>
+          )}
         </div>
       );
     }

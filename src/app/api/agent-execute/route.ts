@@ -26,10 +26,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const MAX_ATTACHED_FILES = 5;
+  const MAX_FILE_CONTENT_LENGTH = 8000;
+
   let body: {
     intent?: string;
     toolDefinitions?: ToolDefinitionForAI[];
     sessionId?: string;
+    attachedFiles?: Array<{ path?: string; content?: string }>;
   };
   try {
     body = await request.json();
@@ -47,6 +51,19 @@ export async function POST(request: NextRequest) {
     : [];
   const clientSessionId =
     typeof body.sessionId === "string" ? body.sessionId.trim() : "";
+
+  const rawAttached = Array.isArray(body.attachedFiles) ? body.attachedFiles : [];
+  const attachedFiles = rawAttached
+    .slice(0, MAX_ATTACHED_FILES)
+    .map((f) => {
+      const path = typeof f.path === "string" ? f.path.trim() : "";
+      let content = typeof f.content === "string" ? f.content : "";
+      if (content.length > MAX_FILE_CONTENT_LENGTH) {
+        content = content.slice(0, MAX_FILE_CONTENT_LENGTH) + "\n...[truncated]";
+      }
+      return { path, content };
+    })
+    .filter((f) => f.path.length > 0);
 
   if (!intent) {
     return new Response(JSON.stringify({ error: "Missing intent" }), {
@@ -79,7 +96,14 @@ export async function POST(request: NextRequest) {
         sendSSE(controller, "agent-start", { intent, sessionId });
 
         let iteration = 0;
-        let message: string | undefined = intent;
+        let message: string | undefined =
+          attachedFiles.length === 0
+            ? intent
+            : `Goal: ${intent}\n\nAttached files for context:\n\n${attachedFiles
+                .map(
+                  (f) => `--- File: ${f.path} ---\n${f.content}\n`
+                )
+                .join("\n")}`;
 
         while (iteration < MAX_ITERATIONS) {
           iteration++;

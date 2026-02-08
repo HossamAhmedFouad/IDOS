@@ -122,7 +122,6 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
 export function AgentPanel() {
   const view = useWorkspaceStore((s) => s.view);
   const isExecuting = useAgentStore((s) => s.isExecuting);
-  const currentIntent = useAgentStore((s) => s.currentIntent);
   const executionHistory = useAgentStore((s) => s.executionHistory);
   const streamingThinking = useAgentStore((s) => s.streamingThinking);
   const agentPanelOpen = useAgentStore((s) => s.agentPanelOpen);
@@ -160,16 +159,6 @@ export function AgentPanel() {
         </button>
       </div>
       <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        {currentIntent && (
-          <div className="rounded-lg border border-primary/40 bg-primary/10 p-3">
-            <div className="mb-1 text-xs font-medium text-primary">
-              Intent
-            </div>
-            <div className="text-sm text-foreground">
-              <MarkdownContent content={currentIntent} />
-            </div>
-          </div>
-        )}
         {executionHistory.map((event, idx) => (
           <AgentEventCard key={idx} event={event} />
         ))}

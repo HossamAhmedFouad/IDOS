@@ -3,9 +3,10 @@
 import type { LucideIcon } from "lucide-react";
 import { useState, useCallback, useEffect, useImperativeHandle, forwardRef, useRef } from "react";
 import { motion } from "framer-motion";
-import { ChevronDown, LayoutGrid, Sparkles } from "lucide-react";
+import { ChevronDown, LayoutGrid, Sparkles, Paperclip, X } from "lucide-react";
 import type { WorkspaceConfig } from "@/lib/types/workspace";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { readFile } from "@/lib/file-system";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -14,7 +15,11 @@ import {
   PopoverPortal,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { AttachmentFilePickerDialog } from "@/components/file-picker";
 import { cn } from "@/lib/utils";
+
+const MAX_ATTACHED_FILES = 5;
+const MAX_FILE_CONTENT_LENGTH = 8000;
 
 const PLACEHOLDER_MESSAGES = [
   "Take notes and set a 25 min timer...",
@@ -36,8 +41,11 @@ export interface IntentInputProps {
   submitIcon?: LucideIcon;
   /** Called when the intent input value changes. */
   onIntentChange?: (value: string) => void;
-  /** When set, submit runs the agent with this intent instead of parse-intent (no workspace switch). */
-  onAgentSubmit?: (intent: string) => void;
+  /** When set, submit runs the agent with this intent instead of parse-intent (no workspace switch). May accept optional second arg with attachedFiles. */
+  onAgentSubmit?: (
+    intent: string,
+    options?: { attachedFiles?: { path: string; content: string }[] }
+  ) => void;
   /** When set, shows a mode dropdown (Workspace | Agent) in the input row. */
   modeSelect?: {
     value: "workspace" | "agent";
@@ -73,6 +81,8 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
   const [placeholderText, setPlaceholderText] = useState("");
   const [isDeletingPlaceholder, setIsDeletingPlaceholder] = useState(false);
+  const [attachedPaths, setAttachedPaths] = useState<string[]>([]);
+  const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -149,8 +159,33 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
       }
 
       if (onAgentSubmit) {
-        onAgentSubmit(text);
+        let attachedFiles: { path: string; content: string }[] | undefined;
+        if (attachedPaths.length > 0) {
+          const results = await Promise.allSettled(
+            attachedPaths.slice(0, MAX_ATTACHED_FILES).map(async (path) => {
+              const content = await readFile(path);
+              return {
+                path,
+                content:
+                  content.length > MAX_FILE_CONTENT_LENGTH
+                    ? content.slice(0, MAX_FILE_CONTENT_LENGTH) + "\n...[truncated]"
+                    : content,
+              };
+            })
+          );
+          attachedFiles = results
+            .filter(
+              (r): r is PromiseFulfilledResult<{ path: string; content: string }> =>
+                r.status === "fulfilled"
+            )
+            .map((r) => r.value);
+          if (attachedFiles.length < attachedPaths.length) {
+            setError("Some files could not be read and were skipped.");
+          }
+        }
+        onAgentSubmit(text, attachedFiles?.length ? { attachedFiles } : undefined);
         setIntent("");
+        setAttachedPaths([]);
         if (!keepLoadingAfterAgentSubmit) setInternalLoading(false);
         return;
       }
@@ -185,7 +220,17 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
         setInternalLoading(false);
       }
     },
-    [intent, loading, createWorkspace, workspaces.length, onSubmitting, onSuccess, onAgentSubmit, keepLoadingAfterAgentSubmit]
+    [
+      intent,
+      attachedPaths,
+      loading,
+      createWorkspace,
+      workspaces.length,
+      onSubmitting,
+      onSuccess,
+      onAgentSubmit,
+      keepLoadingAfterAgentSubmit,
+    ]
   );
 
   const [modePopoverOpen, setModePopoverOpen] = useState(false);
@@ -194,11 +239,38 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
   return (
     <motion.form
       onSubmit={handleSubmit}
-      className="relative flex w-full max-w-4xl gap-2"
+      className="relative flex w-full max-w-4xl flex-col gap-2"
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
     >
+      {onAgentSubmit && attachedPaths.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-border/80 bg-muted/30 px-2 py-1.5">
+          {attachedPaths.slice(0, MAX_ATTACHED_FILES).map((path) => (
+            <span
+              key={path}
+              className="inline-flex items-center gap-1 rounded-md bg-background px-2 py-0.5 text-xs text-foreground shadow-sm"
+            >
+              {path.split("/").pop() ?? path}
+              <button
+                type="button"
+                onClick={() =>
+                  setAttachedPaths((prev) => prev.filter((p) => p !== path))
+                }
+                className="rounded hover:bg-destructive/20 p-0.5"
+                aria-label="Remove attachment"
+              >
+                <X className="size-3" />
+              </button>
+            </span>
+          ))}
+          {attachedPaths.length >= MAX_ATTACHED_FILES && (
+            <span className="text-xs text-muted-foreground">
+              (max {MAX_ATTACHED_FILES})
+            </span>
+          )}
+        </div>
+      )}
       <motion.div
         className="flex flex-1 items-center gap-3 rounded-xl border bg-card/80 p-3 shadow-lg backdrop-blur-md transition-[box-shadow,border-color]"
         animate={{
@@ -210,6 +282,20 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
         }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
+        {onAgentSubmit && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="shrink-0 rounded-lg"
+            onClick={() => setAttachmentPickerOpen(true)}
+            disabled={loading || attachedPaths.length >= MAX_ATTACHED_FILES}
+            aria-label="Attach files"
+            title="Attach files from IDOS storage"
+          >
+            <Paperclip className="size-4" />
+          </Button>
+        )}
         {modeSelect && (
           <Popover open={modePopoverOpen} onOpenChange={setModePopoverOpen}>
             <PopoverTrigger asChild>
@@ -326,6 +412,15 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
         >
           <p className="whitespace-pre-wrap break-words">{error}</p>
         </motion.div>
+      )}
+      {onAgentSubmit && (
+        <AttachmentFilePickerDialog
+          open={attachmentPickerOpen}
+          onOpenChange={setAttachmentPickerOpen}
+          onSelect={(paths) => setAttachedPaths(paths)}
+          existingPaths={attachedPaths}
+          initialPath="/"
+        />
       )}
     </motion.form>
   );

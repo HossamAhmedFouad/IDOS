@@ -42,6 +42,12 @@ export interface ToolDefinitionForAI {
   appId: string;
 }
 
+/** File attached to an agent run for context (path + content sent to API). */
+export interface AttachedFile {
+  path: string;
+  content: string;
+}
+
 export type AgentEventType =
   | "agent-start"
   | "user-message"

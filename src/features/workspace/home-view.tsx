@@ -80,13 +80,20 @@ export function HomeView() {
   const [loading, setLoading] = useState(false);
 
   const handleAgentSubmit = useCallback(
-    (intent: string) => {
+    (
+      intent: string,
+      options?: { attachedFiles?: { path: string; content: string }[] }
+    ) => {
+      const attachedFiles =
+        options?.attachedFiles && options.attachedFiles.length > 0
+          ? options.attachedFiles
+          : undefined;
       setLoading(true);
       const delayMs = 1800;
       setTimeout(() => {
         setView("agent");
         setLoading(false);
-        executeIntent(intent);
+        executeIntent(intent, attachedFiles ? { attachedFiles } : undefined);
       }, delayMs);
     },
     [executeIntent, setView]

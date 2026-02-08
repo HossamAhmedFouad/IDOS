@@ -10,7 +10,7 @@ import {
 } from "@/store/use-workspace-store";
 import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
 import { clearWhiteboardForNewRun } from "@/apps/whiteboard/tools";
-import type { AgentEvent, ToolResult } from "@/lib/types/agent";
+import type { AgentEvent, AttachedFile, ToolResult } from "@/lib/types/agent";
 import type { AgentSessionStatus } from "@/lib/types/agent";
 
 const MAX_RESULT_SIZE = 12000;
@@ -160,7 +160,10 @@ export function useAgentExecution() {
   const setView = useWorkspaceStore((s) => s.setView);
 
   const executeIntent = useCallback(
-    async (intent: string, options?: { continueInSession?: boolean }) => {
+    async (
+      intent: string,
+      options?: { continueInSession?: boolean; attachedFiles?: AttachedFile[] }
+    ) => {
       const toolDefinitions = getToolDefinitionsForAI();
 
       const sessionsState = useAgentSessionsStore.getState();
@@ -191,7 +194,34 @@ export function useAgentExecution() {
       };
 
       if (continueInSession) {
-        addEventAndSync({ type: "user-message", data: { message: intent } });
+        const followUpData: { message: string; attachedFilePaths?: string[] } = {
+          message: intent,
+        };
+        if (
+          options?.attachedFiles &&
+          Array.isArray(options.attachedFiles) &&
+          options.attachedFiles.length > 0
+        ) {
+          followUpData.attachedFilePaths = options.attachedFiles.map(
+            (f) => f.path
+          );
+        }
+        addEventAndSync({ type: "user-message", data: followUpData });
+      }
+      if (!continueInSession) {
+        const userMessageData: { message: string; attachedFilePaths?: string[] } = {
+          message: intent,
+        };
+        if (
+          options?.attachedFiles &&
+          Array.isArray(options.attachedFiles) &&
+          options.attachedFiles.length > 0
+        ) {
+          userMessageData.attachedFilePaths = options.attachedFiles.map(
+            (f) => f.path
+          );
+        }
+        addEventAndSync({ type: "user-message", data: userMessageData });
       }
       if (!continueInSession) {
         // Clear whiteboard so new agent runs start with empty canvas
@@ -303,23 +333,43 @@ export function useAgentExecution() {
 
       try {
         const res = await (continueInSession
-          ? fetch("/api/agent-execute/follow-up", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+          ? (() => {
+              const followUpBody: Record<string, unknown> = {
                 sessionId: backendSessionId,
                 intent,
-              }),
-            })
-          : fetch("/api/agent-execute", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
+              };
+              if (
+                options?.attachedFiles &&
+                Array.isArray(options.attachedFiles) &&
+                options.attachedFiles.length > 0
+              ) {
+                followUpBody.attachedFiles = options.attachedFiles;
+              }
+              return fetch("/api/agent-execute/follow-up", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(followUpBody),
+              });
+            })()
+          : (() => {
+              const body: Record<string, unknown> = {
                 intent,
                 toolDefinitions,
                 sessionId,
-              }),
-            }));
+              };
+              if (
+                options?.attachedFiles &&
+                Array.isArray(options.attachedFiles) &&
+                options.attachedFiles.length > 0
+              ) {
+                body.attachedFiles = options.attachedFiles;
+              }
+              return fetch("/api/agent-execute", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+              });
+            })());
 
         if (!res.ok) {
           if (res.status === 404 && continueInSession) {

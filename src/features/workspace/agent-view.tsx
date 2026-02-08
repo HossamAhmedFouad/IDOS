@@ -98,7 +98,6 @@ export function AgentView() {
   const particleShape = usePersonalizationStore((s) => s.particleShape);
 
   const isExecuting = useAgentStore((s) => s.isExecuting);
-  const currentIntent = useAgentStore((s) => s.currentIntent);
   const executionHistory = useAgentStore((s) => s.executionHistory);
   const streamingThinking = useAgentStore((s) => s.streamingThinking);
   const lastCreatedNotePath = useAgentStore((s) => s.lastCreatedNotePath);
@@ -159,7 +158,6 @@ export function AgentView() {
   const isViewingLiveRun =
     activeSession?.status === "running" && isExecuting;
   const displayHistory = isViewingLiveRun ? executionHistory : (activeSession?.executionHistory ?? []);
-  const displayIntent = isViewingLiveRun ? currentIntent : activeSession?.intent;
 
   useEffect(() => {
     if (agentSessions.length > 0 && activeAgentSessionId === null) {
@@ -168,8 +166,17 @@ export function AgentView() {
   }, [agentSessions.length, activeAgentSessionId, setActiveSession, agentSessions]);
 
   const handleRunAnother = useCallback(
-    (intent: string) => {
-      executeIntent(intent, { continueInSession: true });
+    (
+      intent: string,
+      options?: { attachedFiles?: { path: string; content: string }[] }
+    ) => {
+      executeIntent(intent, {
+        continueInSession: true,
+        ...(options?.attachedFiles &&
+          options.attachedFiles.length > 0 && {
+            attachedFiles: options.attachedFiles,
+          }),
+      });
     },
     [executeIntent]
   );
@@ -601,20 +608,6 @@ export function AgentView() {
                 ref={executionScrollRef}
                 className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-4 py-4"
               >
-                {displayIntent && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-4 rounded-lg border border-primary/40 bg-primary/10 p-3"
-                  >
-                    <div className="mb-1 text-xs font-medium text-primary">
-                      Intent
-                    </div>
-                    <div className="text-sm text-foreground">
-                      <MarkdownContent content={displayIntent} />
-                    </div>
-                  </motion.div>
-                )}
                 {codePreview && (
                   <div className="mb-3">
                     <AgentCodePreview
