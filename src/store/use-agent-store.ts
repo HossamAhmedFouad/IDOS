@@ -24,6 +24,8 @@ interface AgentState {
   agentDataVersion: number;
   /** Last note path created by agent (so Notes app in agent preview can load it when navigating back). */
   lastCreatedNotePath: string | null;
+  /** Recent note paths from this agent session (used by Notes preview when workspace has no Notes app). */
+  agentRecentNotePaths: string[];
   /** Content written by agent to a note - Notes app syncs this to display. Cleared after consumption. */
   agentNoteContent: { path: string; content: string } | null;
 
@@ -38,6 +40,10 @@ interface AgentState {
   closeAgentRunDialog: () => void;
   setHomeAgentMode: (v: boolean) => void;
   setLastCreatedNotePath: (path: string | null) => void;
+  /** Add a path to agent recent notes (MRU, max 20). Used when agent creates/appends and preview has no workspace Notes app. */
+  addPathToAgentRecentNotePaths: (path: string) => void;
+  /** Clear agent recent note paths (e.g. when starting a new agent task). */
+  clearAgentRecentNotePaths: () => void;
   setAgentNoteContent: (payload: { path: string; content: string } | null) => void;
   /** Bump agentDataVersion so file-based apps (e.g. whiteboard) refetch. */
   incrementAgentDataVersion: () => void;
@@ -54,6 +60,7 @@ export const useAgentStore = create<AgentState>((set) => ({
   homeAgentMode: false,
   agentDataVersion: 0,
   lastCreatedNotePath: null,
+  agentRecentNotePaths: [],
   agentNoteContent: null,
 
   startExecution: (intent) =>
@@ -100,6 +107,12 @@ export const useAgentStore = create<AgentState>((set) => ({
   closeAgentRunDialog: () => set({ agentRunDialogOpen: false }),
   setHomeAgentMode: (v) => set({ homeAgentMode: v }),
   setLastCreatedNotePath: (path) => set({ lastCreatedNotePath: path }),
+  addPathToAgentRecentNotePaths: (path) =>
+    set((s) => {
+      const rest = s.agentRecentNotePaths.filter((p) => p !== path);
+      return { agentRecentNotePaths: [path, ...rest].slice(0, 20) };
+    }),
+  clearAgentRecentNotePaths: () => set({ agentRecentNotePaths: [] }),
   setAgentNoteContent: (payload) => set({ agentNoteContent: payload }),
   incrementAgentDataVersion: () =>
     set((s) => ({ agentDataVersion: s.agentDataVersion + 1 })),

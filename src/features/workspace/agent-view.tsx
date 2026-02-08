@@ -95,6 +95,7 @@ export function AgentView() {
   const executionHistory = useAgentStore((s) => s.executionHistory);
   const streamingThinking = useAgentStore((s) => s.streamingThinking);
   const lastCreatedNotePath = useAgentStore((s) => s.lastCreatedNotePath);
+  const agentRecentNotePaths = useAgentStore((s) => s.agentRecentNotePaths);
 
   const { executeIntent } = useAgentExecution();
 
@@ -237,19 +238,23 @@ export function AgentView() {
   // App shown in left pane: user-selected or first affected (do not auto-switch on new tool so UI updates are not interrupted)
   const displayedAppId = focusedAppIdOverride ?? affectedAppIds[0] ?? null;
 
-  // Instance id and config for the displayed app (use lastCreatedNotePath for notes preview so content persists when navigating)
+  // Instance id and config for the displayed app (use lastCreatedNotePath + agentRecentNotePaths for notes preview so user can navigate between agent-created notes)
   const displayedAppInstance = useMemo(() => {
     if (!displayedAppId) return null;
     const match = workspace.apps?.find((app) => app.type === displayedAppId);
     if (match) return { id: match.id, config: match.config };
     const previewConfig =
-      displayedAppId === "notes" && lastCreatedNotePath
-        ? { filePath: lastCreatedNotePath }
+      displayedAppId === "notes" && (lastCreatedNotePath || agentRecentNotePaths.length > 0)
+        ? {
+            filePath: lastCreatedNotePath ?? agentRecentNotePaths[0],
+            recentFilePaths: agentRecentNotePaths,
+            agentPreview: true,
+          }
         : displayedAppId === "whiteboard"
           ? { filePath: "/whiteboard/default.json" }
           : {};
     return { id: `agent-preview-${displayedAppId}`, config: previewConfig };
-  }, [displayedAppId, workspace.apps, lastCreatedNotePath]);
+  }, [displayedAppId, workspace.apps, lastCreatedNotePath, agentRecentNotePaths]);
 
   // Resizable split: drag to update ratio
   const handleSplitPointerDown = useCallback((e: React.PointerEvent) => {

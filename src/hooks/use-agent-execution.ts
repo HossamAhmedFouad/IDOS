@@ -14,6 +14,26 @@ import type { AgentEvent, ToolResult } from "@/lib/types/agent";
 import type { AgentSessionStatus } from "@/lib/types/agent";
 
 const MAX_RESULT_SIZE = 12000;
+const MAX_RECENT_NOTES = 20;
+
+function moveToFront(paths: string[], path: string): string[] {
+  const rest = paths.filter((p) => p !== path);
+  return [path, ...rest].slice(0, MAX_RECENT_NOTES);
+}
+
+/** Add a path to the Notes app's recent list (e.g. after append). When in agent view with no workspace Notes app, update agent store instead. */
+function addPathToNotesRecent(path: string): void {
+  const state = useWorkspaceStore.getState();
+  const config = selectActiveWorkspaceConfig(state);
+  const notesApp = config.apps.find((a) => a.type === "notes");
+  if (notesApp) {
+    const current = (notesApp.config?.recentFilePaths as string[] | undefined) ?? [];
+    const next = moveToFront(current, path);
+    state.updateAppConfig(notesApp.id, { recentFilePaths: next });
+  } else if (state.view === "agent") {
+    useAgentStore.getState().addPathToAgentRecentNotePaths(path);
+  }
+}
 
 function sanitizeToolResultForAI(result: ToolResult): ToolResult {
   if (result.data === undefined) return result;
@@ -69,7 +89,7 @@ function eventTypeToStatus(eventType: string): AgentSessionStatus {
   return "completed";
 }
 
-/** When the agent creates a note, ensure the Notes app has that file path so it loads when shown (workspace + agent store for preview). */
+/** When the agent creates a note, ensure the Notes app has that file path and add to recent list. */
 function syncCreatedNotePathToWorkspace(toolName: string, result: ToolResult): void {
   if (toolName !== "notes_create_note" || !result.success || !result.data) return;
   const data = result.data as { path?: string };
@@ -79,12 +99,25 @@ function syncCreatedNotePathToWorkspace(toolName: string, result: ToolResult): v
   const state = useWorkspaceStore.getState();
   const config = selectActiveWorkspaceConfig(state);
   const notesApp = config.apps.find((a) => a.type === "notes");
+  const recentFilePaths = moveToFront(
+    (notesApp?.config?.recentFilePaths as string[] | undefined) ?? [],
+    path
+  );
   if (notesApp) {
-    state.updateAppConfig(notesApp.id, { filePath: path });
-  } else if (state.view !== "agent") {
-    // In Agent view, don't add a new app — it would spawn a floating window that blocks the UI. The left pane shows a preview instead.
-    state.addApp("notes", { filePath: path });
+    state.updateAppConfig(notesApp.id, { filePath: path, recentFilePaths });
+  } else if (state.view === "agent") {
+    useAgentStore.getState().addPathToAgentRecentNotePaths(path);
+  } else {
+    state.addApp("notes", { filePath: path, recentFilePaths });
   }
+}
+
+/** When the agent appends to a note, add that path to the Notes app's recent list. */
+function syncAppendedNotePathToRecent(toolName: string, args: Record<string, unknown>): void {
+  if (toolName !== "notes_append_to_note") return;
+  const path = typeof args.path === "string" ? args.path.trim() : undefined;
+  if (!path) return;
+  addPathToNotesRecent(path);
 }
 
 /** Sync agent-written note content to the store so the Notes app can display it (avoids React controlled-component overwriting typewriter). */
@@ -126,6 +159,9 @@ export function useAgentExecution() {
       const sessionId = continueInSession ? activeId! : createSession(intent);
       setView("agent");
       startExecution(intent);
+      if (!continueInSession) {
+        useAgentStore.getState().clearAgentRecentNotePaths();
+      }
       if (continueInSession && existingSession?.executionHistory?.length) {
         setExecutionHistory(existingSession.executionHistory);
       }
@@ -223,6 +259,7 @@ export function useAgentExecution() {
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
                 syncAgentNoteContent(name, result, args as Record<string, unknown>);
+                syncAppendedNotePathToRecent(name, args as Record<string, unknown>);
                 runContinue(sessionId, name, result);
               })
               .catch((err) => {
@@ -315,6 +352,7 @@ export function useAgentExecution() {
                   void uiUpdateExecutor.executeMultiple(result.multipleUpdates);
                 syncCreatedNotePathToWorkspace(name, result);
                 syncAgentNoteContent(name, result, args);
+                syncAppendedNotePathToRecent(name, args);
                 if (!apiSessionId) {
                   addEventAndSync({
                     type: "error",
