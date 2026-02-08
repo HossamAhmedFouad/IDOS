@@ -111,11 +111,24 @@ export function CalendarApp({ id, config }: AppProps) {
 
   const view = useWorkspaceStore((s) => s.view);
   const agentDataVersion = useAgentStore((s) => s.agentDataVersion);
+  const lastToolCall = useAgentStore((s) => s.lastToolCall);
   useEffect(() => {
     if (view === "agent" && agentDataVersion > 0) {
       loadEvents();
+      const result = lastToolCall?.result as { data?: { date?: string } } | undefined;
+      const createdDate =
+        lastToolCall?.toolName === "calendar_create_event" && result?.data?.date
+          ? result.data.date
+          : undefined;
+      if (createdDate) {
+        try {
+          setSelectedDate(new Date(createdDate + "T12:00:00"));
+        } catch {
+          // ignore invalid date
+        }
+      }
     }
-  }, [view, agentDataVersion, loadEvents]);
+  }, [view, agentDataVersion, loadEvents, lastToolCall]);
 
   const saveEvents = useCallback(
     async (newEvents: CalendarEvent[]) => {
@@ -173,11 +186,24 @@ export function CalendarApp({ id, config }: AppProps) {
 
   const activeDate = selectedDate ?? new Date();
   const selectedStr = formatDate(activeDate);
+  const todayStr = formatDate(new Date());
   const dayEvents = events.filter((e) => e.date === selectedStr);
   const timedEvents = dayEvents
     .filter((e) => e.time)
     .sort((a, b) => parseTime(a.time!) - parseTime(b.time!));
   const allDayEvents = dayEvents.filter((e) => !e.time);
+
+  const upcomingEvents = useMemo(() => {
+    return [...events]
+      .filter((e) => e.date >= todayStr)
+      .sort(
+        (a, b) =>
+          a.date.localeCompare(b.date) ||
+          (a.time ?? "").localeCompare(b.time ?? "") ||
+          (a.endTime ?? "").localeCompare(b.endTime ?? "")
+      )
+      .slice(0, 6);
+  }, [events, todayStr]);
 
   if (loading) {
     return (
@@ -194,14 +220,67 @@ export function CalendarApp({ id, config }: AppProps) {
       )}
 
       <div className="grid min-h-0 flex-1 grid-cols-2 gap-4">
-        {/* Left column: Calendar */}
-        <div className="flex flex-col overflow-auto">
+        {/* Left column: Calendar + upcoming summary */}
+        <div className="flex flex-col overflow-auto gap-3">
           <Calendar
             mode="single"
             selected={selectedDate}
             onSelect={(d) => setSelectedDate(d ?? undefined)}
             className="rounded-lg border"
           />
+          {upcomingEvents.length > 0 && (
+            <div className="shrink-0 rounded-lg border border-border bg-muted/30 p-2">
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Upcoming
+              </p>
+              <ul className="space-y-1">
+                {upcomingEvents.map((evt) => {
+                  const isToday = evt.date === todayStr;
+                  const dateLabel = isToday
+                    ? "Today"
+                    : (() => {
+                        try {
+                          const d = new Date(evt.date + "T12:00:00");
+                          const tomorrow = new Date();
+                          tomorrow.setDate(tomorrow.getDate() + 1);
+                          return formatDate(d) === formatDate(tomorrow)
+                            ? "Tomorrow"
+                            : format(d, "MMM d");
+                        } catch {
+                          return evt.date;
+                        }
+                      })();
+                  return (
+                    <li key={evt.id}>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSelectedDate(new Date(evt.date + "T12:00:00"))
+                        }
+                        className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-accent/50"
+                      >
+                        <span className="w-14 shrink-0 text-xs text-muted-foreground">
+                          {dateLabel}
+                        </span>
+                        {evt.time ? (
+                          <span className="w-16 shrink-0 text-xs text-muted-foreground">
+                            {formatTime12h(evt.time)}
+                          </span>
+                        ) : (
+                          <span className="w-16 shrink-0 text-xs italic text-muted-foreground">
+                            All day
+                          </span>
+                        )}
+                        <span className="min-w-0 truncate text-foreground">
+                          {evt.title}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Right column: Events / Timeline */}

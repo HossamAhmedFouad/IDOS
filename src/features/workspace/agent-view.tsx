@@ -33,6 +33,7 @@ import { AppRenderer } from "./app-renderer";
 import { cn } from "@/lib/utils";
 import type { AppId } from "@/lib/types";
 import { getAppName } from "@/lib/constants/app-catalog";
+import { AGENT_PLACEHOLDER_ID } from "@/lib/constants/agent-placeholder";
 import { getAppComponent } from "@/apps/registry";
 import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
 import type { AppSpecificUIUpdate } from "@/lib/types/uiUpdates";
@@ -302,7 +303,7 @@ export function AgentView() {
                 };
               })()
             : {};
-    return { id: `agent-preview-${displayedAppId}`, config: previewConfig };
+    return { id: AGENT_PLACEHOLDER_ID, config: previewConfig };
   }, [
     displayedAppId,
     workspace.apps,
@@ -533,7 +534,7 @@ export function AgentView() {
             {/* Left: Tabbed view of affected apps (focus view) */}
             <div
               ref={leftPaneRef}
-              id="agent-placeholder"
+              id="agent-app-pane"
               className="flex flex-col shrink-0 overflow-hidden bg-background/50 border-r border-border/60"
               style={{
                 width: `${agentViewSplitRatio * 100}%`,
