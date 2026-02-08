@@ -6,6 +6,7 @@ import { LayoutGrid, Play, Sparkles } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
+  selectMinimizedAppIds,
 } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
 import { useAgentStore } from "@/store/use-agent-store";
@@ -129,6 +130,7 @@ export function HomeView() {
 
   const hasWorkspaceApps =
     activeWorkspaceId != null && workspace.apps.length > 0;
+  const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
   const layoutResult = useMemo(
     () =>
       hasWorkspaceApps
@@ -143,6 +145,10 @@ export function HomeView() {
         : { apps: [] },
     [hasWorkspaceApps, workspace, viewport.width, viewport.height]
   );
+
+  const allAppsMinimized =
+    layoutResult.apps.length > 0 &&
+    layoutResult.apps.every((app) => minimizedAppIds.includes(app.id));
 
   const handleSuccess = () => {
     setView("workspace");
@@ -346,10 +352,13 @@ export function HomeView() {
         </div>
       </div>
 
-      {/* Floating app layer: same as workspace, above intent so windows can be dragged on top */}
+      {/* Floating app layer: same as workspace, above intent so windows can be dragged on top; allow passthrough when all minimized so intent bar is clickable */}
       {layoutResult.apps.length > 0 && (
         <div
-          className="absolute left-0 right-0 z-30"
+          className={cn(
+            "absolute left-0 right-0 z-30",
+            allAppsMinimized && "pointer-events-none"
+          )}
           style={{
             top: TOP_BAR_HEIGHT,
             bottom: TASKBAR_HEIGHT_PX,

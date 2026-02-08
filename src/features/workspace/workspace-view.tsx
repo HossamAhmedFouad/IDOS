@@ -4,6 +4,7 @@ import { useMemo, useEffect, useState, useRef } from "react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
+  selectMinimizedAppIds,
   defaultWorkspaceConfig,
 } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
@@ -127,6 +128,11 @@ export function WorkspaceView() {
       ),
     [workspace, viewport.width, viewport.height]
   );
+
+  const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
+  const allAppsMinimized =
+    layoutResult.apps.length > 0 &&
+    layoutResult.apps.every((app) => minimizedAppIds.includes(app.id));
 
   const sortedWorkspaces = [...workspaces].sort((a, b) => {
     const aFav = a.isFavorite ? 1 : 0;
@@ -357,9 +363,12 @@ export function WorkspaceView() {
         </div>
       )}
 
-      {/* App windows container - offset for top bar and taskbar */}
+      {/* App windows container - offset for top bar and taskbar; allow passthrough when all minimized */}
       <div
-        className="absolute left-0 right-0 z-10"
+        className={cn(
+          "absolute left-0 right-0 z-10",
+          allAppsMinimized && "pointer-events-none"
+        )}
         style={{
           top: TOP_BAR_HEIGHT,
           bottom: TASKBAR_HEIGHT_PX,

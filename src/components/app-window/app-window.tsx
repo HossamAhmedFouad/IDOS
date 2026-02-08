@@ -205,7 +205,7 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
       id={appId}
       initial={{ opacity: 0, scale: 0.92 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.92 }}
+      exit={{ opacity: 0, scale: 0.92, pointerEvents: "none" }}
       transition={windowTransition}
       className="absolute"
       style={{

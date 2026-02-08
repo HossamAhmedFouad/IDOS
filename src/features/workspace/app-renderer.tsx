@@ -26,7 +26,7 @@ export function AppRenderer({ layoutResult, activeModes }: AppRendererProps) {
   const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
   const allApps = layoutResult.apps;
   const visibleApps = allApps.filter((app) => !minimizedAppIds.includes(app.id));
-  const showMinimize = allApps.length > 1;
+  const showMinimize = allApps.length >= 1;
 
   return (
     <AnimatePresence initial={false}>
