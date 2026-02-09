@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ModeProvider } from "@/features/workspace/mode-provider";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { useSettingsStore } from "@/store/use-settings-store";
@@ -13,6 +13,16 @@ export default function Home() {
   const setView = useWorkspaceStore((s) => s.setView);
   const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
   const hasGeminiKey = !!geminiApiKey?.trim();
+  const didHandleFromSettings = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash === "#from-settings" && !didHandleFromSettings.current) {
+      didHandleFromSettings.current = true;
+      setView("home");
+      window.history.replaceState(null, "", "/");
+    }
+  }, [setView]);
 
   useEffect(() => {
     if (view === "agent" && !hasGeminiKey) {

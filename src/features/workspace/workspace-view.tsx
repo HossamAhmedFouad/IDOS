@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
@@ -18,7 +19,7 @@ import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star, Sparkles } from "lucide-react";
+import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star, Sparkles, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { LayoutStrategy } from "@/lib/types/layout";
@@ -58,15 +59,13 @@ export function WorkspaceView() {
       : { width: 800, height: 600 }
   );
 
-  // When on workspace view with workspaces but no active, select first
+  // When on workspace view with workspaces but no active, select first (use first id to avoid effect loop from workspaces reference changes)
+  const firstWorkspaceId = workspaces.length > 0 ? workspaces[0].id : null;
   useEffect(() => {
-    if (
-      workspaces.length > 0 &&
-      activeWorkspaceId === null
-    ) {
-      setActiveWorkspace(workspaces[0].id);
+    if (firstWorkspaceId != null && activeWorkspaceId === null) {
+      setActiveWorkspace(firstWorkspaceId);
     }
-  }, [workspaces.length, activeWorkspaceId, setActiveWorkspace, workspaces]);
+  }, [firstWorkspaceId, activeWorkspaceId, setActiveWorkspace]);
 
   useEffect(() => {
     const updateViewport = () => {
@@ -273,6 +272,14 @@ export function WorkspaceView() {
             <Sparkles className="size-4" />
             Agent
           </Button>
+          <Link
+            href="/settings"
+            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            title="Settings"
+          >
+            <Settings className="size-4" />
+            Settings
+          </Link>
           <Button
             type="button"
             variant="ghost"

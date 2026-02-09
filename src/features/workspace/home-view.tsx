@@ -261,6 +261,14 @@ export function HomeView() {
           <Sparkles className="size-4" />
           Agent
         </Button>
+        <Link
+          href="/settings"
+          className="inline-flex h-8 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          title="Settings"
+        >
+          <Settings className="size-4" />
+          Settings
+        </Link>
         </div>
       </div>
 

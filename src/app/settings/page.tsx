@@ -17,6 +17,10 @@ export default function SettingsPage() {
   const [value, setValue] = useState("");
   const [saved, setSaved] = useState(false);
 
+  const handleBackToIdos = () => {
+    window.location.href = "/#from-settings";
+  };
+
   useEffect(() => {
     setValue(geminiApiKey ?? "");
   }, [geminiApiKey]);
@@ -91,12 +95,15 @@ export default function SettingsPage() {
         </form>
 
         <div className="pt-4 border-t border-border">
-          <Link href="/">
-            <Button variant="ghost" className="gap-2 w-full sm:w-auto">
-              <ArrowLeft className="size-4" />
-              Back to IDOS
-            </Button>
-          </Link>
+          <Button
+            type="button"
+            variant="ghost"
+            className="gap-2 w-full sm:w-auto"
+            onClick={handleBackToIdos}
+          >
+            <ArrowLeft className="size-4" />
+            Back to IDOS
+          </Button>
         </div>
       </div>
     </div>
