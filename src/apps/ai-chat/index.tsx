@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { MarkdownContent } from "@/components/markdown-content";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useSettingsStore } from "@/store/use-settings-store";
 
 interface Message {
   id: string;
@@ -27,9 +28,12 @@ function parseStoredMessages(config: AppProps["config"]): Message[] {
 }
 
 function getFriendlyErrorMessage(res: { status: number }, data: { error?: string }): string {
+  if (data?.error) return data.error;
   switch (res.status) {
     case 400:
       return "Your message couldn't be sent. Please try again.";
+    case 401:
+      return "Add your Gemini API key in Settings to use the chat.";
     case 502:
       return "The assistant couldn't generate a response. Please try again.";
     case 503:
@@ -46,6 +50,8 @@ export function AIChatApp(props: AppProps) {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
+  const hasApiKey = !!geminiApiKey?.trim();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -65,7 +71,10 @@ export function AIChatApp(props: AppProps) {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(geminiApiKey?.trim() && { "X-Gemini-API-Key": geminiApiKey.trim() }),
+        },
         body: JSON.stringify({
           message: text,
           messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -93,7 +102,7 @@ export function AIChatApp(props: AppProps) {
     } finally {
       setLoading(false);
     }
-  }, [input, messages]);
+  }, [input, messages, geminiApiKey]);
 
   return (
     <div className="flex h-full flex-col p-4">
@@ -143,14 +152,14 @@ export function AIChatApp(props: AppProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-          placeholder="Type a message..."
-          disabled={loading}
+          placeholder={hasApiKey ? "Type a message..." : "Add your Gemini API key in Settings to chat"}
+          disabled={loading || !hasApiKey}
           className="flex-1"
         />
         <Button
           type="button"
           onClick={sendMessage}
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || !hasApiKey}
         >
           Send
         </Button>

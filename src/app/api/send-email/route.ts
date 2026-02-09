@@ -1,10 +1,22 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const apiKey = process.env.RESEND_API_KEY ?? process.env.IDOS_RESEND_API_KEY;
 const resend = new Resend(apiKey);
 
+/** Max emails per IP per minute to reduce abuse. Add auth for production. */
+const SEND_EMAIL_RATE_LIMIT = 5;
+
 export async function POST(request: Request) {
+  const limit = checkRateLimit(request, SEND_EMAIL_RATE_LIMIT);
+  if (!limit.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfter) } }
+    );
+  }
+
   if (!apiKey) {
     return NextResponse.json(
       { error: "Email is not configured. Add RESEND_API_KEY or IDOS_RESEND_API_KEY to .env" },

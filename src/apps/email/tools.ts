@@ -140,6 +140,10 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
           });
           const data = await res.json().catch(() => ({}));
           const success = res.ok;
+          if (success) {
+            const emptyDraft: Draft = { to: "", subject: "", body: "" };
+            await writeFile(filePath, JSON.stringify(emptyDraft, null, 2));
+          }
           return {
             success,
             data: success ? {} : { error: data?.error },
@@ -202,7 +206,7 @@ export function createEmailTools(appInstanceId: string): AppTool[] {
         required: [],
       },
       execute: async () => {
-        const emptyDraft: Draft = { to: "", subject: "", body: "" };
+        const emptyDraft = { to: "", subject: "", body: "" };
         await writeFile(DEFAULT_PATH, JSON.stringify(emptyDraft, null, 2));
         return { success: true, data: { cleared: true } };
       },

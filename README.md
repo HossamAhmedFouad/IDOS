@@ -100,6 +100,8 @@ GEMINI_API_KEY=your_gemini_api_key_here
 
 Get a key from [Google AI Studio](https://aistudio.google.com/app/apikey). `GOOGLE_GENERATIVE_AI_API_KEY` is also supported.
 
+**Security (before going public):** Never commit `.env`, `.env.local`, or any file containing API keys. If a key was ever committed or shared, rotate it immediately in the provider’s console. The app uses in-memory rate limiting on `/api/send-email` and `/api/chat` to reduce abuse; for production at scale, consider Redis-based rate limiting and authentication.
+
 ### 3. Run
 
 ```bash

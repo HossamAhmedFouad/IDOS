@@ -121,10 +121,20 @@ export function EmailApp({ id, config }: AppProps) {
         return;
       }
       setSendStatus("success");
+      // Clear draft (including html) so next email doesn't reuse old content
+      setTo("");
+      setSubject("");
+      setBody("");
+      setHtml("");
+      try {
+        await writeFile(filePath, JSON.stringify({ to: "", subject: "", body: "" }, null, 2));
+      } catch {
+        // ignore persist failure
+      }
     } finally {
       setSending(false);
     }
-  }, [to, subject, body, html]);
+  }, [to, subject, body, html, filePath]);
 
   const handleBlur = useCallback(() => {
     saveDraft();

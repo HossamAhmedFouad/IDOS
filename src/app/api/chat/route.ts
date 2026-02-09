@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  isInvalidApiKeyError,
+  INVALID_API_KEY_MESSAGE,
+  API_KEY_INVALID_CODE,
+} from "@/lib/gemini/api-key-error";
 
 const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL ?? "gemini-3-flash-preview";
 
 export async function POST(request: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const apiKey = request.headers.get("x-gemini-api-key")?.trim();
     if (!apiKey) {
       return NextResponse.json(
-        { error: "Chat is not available right now. Please check your configuration." },
-        { status: 503 }
+        { error: "Gemini API key is required. Add it in Settings.", code: "API_KEY_REQUIRED" },
+        { status: 401 }
       );
     }
 
@@ -60,7 +65,13 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ message: reply });
-  } catch {
+  } catch (err) {
+    if (isInvalidApiKeyError(err)) {
+      return NextResponse.json(
+        { error: INVALID_API_KEY_MESSAGE, code: API_KEY_INVALID_CODE },
+        { status: 401 }
+      );
+    }
     return NextResponse.json(
       { error: "Something went wrong. Please try again later." },
       { status: 500 }
