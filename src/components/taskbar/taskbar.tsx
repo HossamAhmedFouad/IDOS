@@ -16,12 +16,12 @@ import { getAppIcon } from "@/lib/constants/app-icons";
 import type { AppId } from "@/lib/types";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-
-const TASKBAR_HEIGHT = 84;
+import { useTaskbarHeight } from "@/hooks/use-taskbar-height";
 const MAX_DESK_APPS = 8;
 const DEFAULT_PINNED: AppId[] = ["notes", "timer", "todo", "ai-chat"];
 
 export function Taskbar() {
+  const taskbarHeight = useTaskbarHeight();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const addApp = useWorkspaceStore((s) => s.addApp);
@@ -118,14 +118,17 @@ export function Taskbar() {
 
   return (
     <motion.div
-      initial={{ y: TASKBAR_HEIGHT }}
+      initial={{ y: taskbarHeight }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-2 border-t border-border/80 bg-background/90 px-4 pt-2 pb-5 backdrop-blur-md transition-opacity"
-      style={{ height: TASKBAR_HEIGHT }}
+      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-3 border-t border-border/80 bg-background/90 px-3 pt-3 backdrop-blur-md transition-opacity sm:gap-2 sm:px-4 sm:pt-2 sm:pb-5"
+      style={{
+        height: taskbarHeight,
+        paddingBottom: `max(0.5rem, env(safe-area-inset-bottom, 0px))`,
+      }}
     >
       <div
-        className="gemini-badge pointer-events-none flex shrink-0 items-center gap-2 rounded-md border border-primary/30 bg-background/60 px-2.5 py-1.5"
+        className="gemini-badge pointer-events-none flex shrink-0 items-center gap-2 rounded-md border border-primary/30 bg-background/60 px-2.5 py-2 sm:py-1.5"
         aria-hidden
       >
         <span className="gemini-badge-text text-xs font-semibold tracking-wide">
@@ -137,14 +140,14 @@ export function Taskbar() {
           className="gemini-logo-rotate size-5 shrink-0 object-contain"
         />
       </div>
-      <div className="flex flex-1 items-center justify-center gap-2 rounded-lg px-2">
+      <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-1 sm:justify-center sm:px-2">
         <motion.button
           type="button"
           whileHover={{ scale: 1.12 }}
           whileTap={{ scale: 0.96 }}
           transition={{ type: "spring", stiffness: 400, damping: 25 }}
           className={cn(
-            "flex size-14 shrink-0 items-center justify-center rounded-xl transition-colors -ml-2 mr-2",
+            "flex min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 items-center justify-center rounded-xl transition-colors -ml-2 mr-2 size-11 sm:size-14",
             pickerOpen
               ? "bg-primary/20 text-primary"
               : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -157,37 +160,45 @@ export function Taskbar() {
           <LayoutGrid className="size-7" />
         </motion.button>
 
-        <div className="h-10 w-px bg-border/60" aria-hidden />
+        <div className="h-10 w-px shrink-0 bg-border/60" aria-hidden />
 
-        {deskApps.map((app) => {
-          const Icon = getAppIcon(app.id);
-          const isOpen = openAppTypes.has(app.id);
-          const hasMinimized = workspace.apps.some(
-            (a) => a.type === app.id && minimizedAppIds.includes(a.id)
-          );
-          const isActive = isOpen || hasMinimized;
-          return (
-            <motion.button
-              key={app.id}
-              type="button"
-              whileHover={{ scale: 1.12 }}
-              whileTap={{ scale: 0.96 }}
-              transition={{ type: "spring", stiffness: 400, damping: 25 }}
-              className={cn(
-                "flex size-14 items-center justify-center rounded-xl transition-colors",
-                isActive
-                  ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                view === "agent" && "pointer-events-none opacity-50"
-              )}
-              onClick={() => handleAppClick(app.id)}
-              title={hasMinimized ? `Restore ${app.name}` : app.name}
-              aria-label={hasMinimized ? `Restore ${app.name}` : `Open ${app.name}`}
-            >
-              <Icon className="size-7" />
-            </motion.button>
-          );
-        })}
+        {/* On mobile: horizontal scroll for app icons; on desktop: centered row */}
+        <div
+          className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto overflow-y-hidden py-1 [-webkit-overflow-scrolling:touch] sm:justify-center sm:overflow-visible"
+          role="list"
+          aria-label="Pinned and open apps"
+        >
+          {deskApps.map((app) => {
+            const Icon = getAppIcon(app.id);
+            const isOpen = openAppTypes.has(app.id);
+            const hasMinimized = workspace.apps.some(
+              (a) => a.type === app.id && minimizedAppIds.includes(a.id)
+            );
+            const isActive = isOpen || hasMinimized;
+            return (
+              <motion.button
+                key={app.id}
+                type="button"
+                role="listitem"
+                whileHover={{ scale: 1.12 }}
+                whileTap={{ scale: 0.96 }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                className={cn(
+                  "flex min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 items-center justify-center rounded-xl transition-colors size-11 sm:size-14",
+                  isActive
+                    ? "bg-primary/20 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                  view === "agent" && "pointer-events-none opacity-50"
+                )}
+                onClick={() => handleAppClick(app.id)}
+                title={hasMinimized ? `Restore ${app.name}` : app.name}
+                aria-label={hasMinimized ? `Restore ${app.name}` : `Open ${app.name}`}
+              >
+                <Icon className="size-7" />
+              </motion.button>
+            );
+          })}
+        </div>
 
         {typeof document !== "undefined" &&
           createPortal(
@@ -209,7 +220,7 @@ export function Taskbar() {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.96 }}
                     transition={{ duration: 0.15 }}
-                    className="w-[520px] max-h-[80vh] overflow-hidden rounded-xl border border-border/80 bg-card shadow-xl"
+                    className="w-[calc(100vw-2rem)] max-w-[520px] max-h-[85vh] overflow-hidden rounded-none border border-border/80 bg-card shadow-xl sm:max-h-[80vh] sm:rounded-xl"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <div className="flex items-center gap-2 border-b border-border/60 px-3 py-3">
@@ -223,7 +234,7 @@ export function Taskbar() {
                         autoFocus
                       />
                     </div>
-                    <div className="grid max-h-[400px] grid-cols-5 gap-3 overflow-y-auto p-4">
+                    <div className="grid max-h-[400px] grid-cols-3 gap-2 overflow-y-auto p-3 sm:grid-cols-5 sm:gap-3 sm:p-4">
                       {filteredApps.map((app) => (
                         <motion.button
                           key={app.id}
@@ -265,4 +276,4 @@ export function Taskbar() {
   );
 }
 
-export const TASKBAR_HEIGHT_PX = TASKBAR_HEIGHT;
+export { TASKBAR_HEIGHT_PX } from "@/hooks/use-taskbar-height";

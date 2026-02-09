@@ -25,7 +25,9 @@ import { MarkdownContent } from "@/components/markdown-content";
 import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
-import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { Taskbar } from "@/components/taskbar";
+import { useTaskbarHeight } from "@/hooks/use-taskbar-height";
+import { useTopBarHeight } from "@/hooks/use-top-bar-height";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,8 +42,8 @@ import { getAppComponent } from "@/apps/registry";
 import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
 import type { AppSpecificUIUpdate } from "@/lib/types/uiUpdates";
 import { Suspense } from "react";
+import { MOBILE_BREAKPOINT_PX } from "@/lib/constants/breakpoints";
 
-const TOP_BAR_HEIGHT = 48;
 const MIN_PANE_WIDTH_PX = 280;
 
 function toolNameToAppId(toolName: string): AppId | null {
@@ -79,6 +81,8 @@ function AppLoadingFallback() {
 }
 
 export function AgentView() {
+  const taskbarHeight = useTaskbarHeight();
+  const topBarHeight = useTopBarHeight();
   const setView = useWorkspaceStore((s) => s.setView);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -147,13 +151,14 @@ export function AgentView() {
             viewport.width || 800,
             Math.max(
               200,
-              (viewport.height || 600) - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX
+              (viewport.height || 600) - topBarHeight - taskbarHeight
             )
           )
         : { apps: [] },
-    [hasWorkspaceApps, workspace, viewport.width, viewport.height]
+    [hasWorkspaceApps, workspace, viewport.width, viewport.height, taskbarHeight, topBarHeight]
   );
 
+  const isMobile = (viewport.width || 800) < MOBILE_BREAKPOINT_PX;
   const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
   const allAppsMinimized =
     layoutResult.apps.length > 0 &&
@@ -352,19 +357,22 @@ export function AgentView() {
         particleShape={particleShape}
       />
 
-      <div className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
-        <div className="flex min-w-0 shrink items-center gap-2">
+      <div
+        className="absolute left-0 right-0 top-0 z-20 flex min-h-14 min-w-0 items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-2 py-2 backdrop-blur-md sm:min-h-0 sm:gap-4 sm:px-4"
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
+      >
+        <div className="flex min-w-0 shrink items-center gap-1 sm:gap-2">
           <FullscreenButton />
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setView("home")}
-            className="gap-2 shrink-0 text-muted-foreground hover:text-foreground"
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 gap-2 p-2 text-muted-foreground hover:text-foreground sm:min-h-0 sm:min-w-0 sm:px-3"
             title="Home"
           >
-            <Home className="size-4" />
-            Home
+            <Home className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Home</span>
           </Button>
           <Button
             type="button"
@@ -379,33 +387,33 @@ export function AgentView() {
               }
             }}
             disabled={workspaces.length === 0}
-            className="gap-2 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 gap-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-3"
             title={workspaces.length === 0 ? "No workspace" : "Workspace"}
           >
-            <LayoutGrid className="size-4" />
-            Workspace
+            <LayoutGrid className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Workspace</span>
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className="gap-2 shrink-0 bg-primary/10 text-primary"
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 gap-2 p-2 bg-primary/10 text-primary sm:min-h-0 sm:min-w-0 sm:px-3"
             title="Agent"
             aria-current="page"
           >
-            <Sparkles className="size-4" />
-            Agent
+            <Sparkles className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Agent</span>
           </Button>
           <Link
             href="/settings"
-            className="inline-flex h-8 shrink-0 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="inline-flex min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 items-center justify-center gap-2 rounded-md p-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-8 sm:min-w-0 sm:px-3"
             title="Settings"
           >
-            <Settings className="size-4" />
-            Settings
+            <Settings className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Settings</span>
           </Link>
           {agentSessions.length > 0 && (
-            <div className="flex items-center gap-1 overflow-x-auto">
+            <div className="flex min-h-[var(--idos-touch-min,44px)] items-center gap-1 overflow-x-auto sm:min-h-0">
               {sortedSessions.map((s) => (
                 <div
                   key={s.id}
@@ -495,11 +503,11 @@ export function AgentView() {
             size="sm"
             onClick={() => hasGeminiKey && openAgentRunDialog()}
             disabled={!hasGeminiKey}
-            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 gap-1.5 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-3"
             title={hasGeminiKey ? "New agent task" : "Set up Gemini API key in Settings"}
           >
-            <Plus className="size-4" />
-            New
+            <Plus className="size-4 shrink-0" />
+            <span className="hidden sm:inline">New</span>
           </Button>
         </div>
       </div>
@@ -507,7 +515,7 @@ export function AgentView() {
       {/* Agent content below app layer (z-20) so open apps block interaction; passthrough when all minimized */}
       <div
         className="absolute left-0 right-0 bottom-0 z-20 pointer-events-none flex flex-col overflow-hidden"
-        style={{ top: TOP_BAR_HEIGHT, bottom: TASKBAR_HEIGHT_PX }}
+        style={{ top: topBarHeight, bottom: taskbarHeight }}
       >
         <div className="flex flex-1 flex-col min-h-0 w-full overflow-hidden pointer-events-auto">
         {noSessions ? (
@@ -553,17 +561,29 @@ export function AgentView() {
         ) : (
           <div
             data-agent-split-container
-            className="flex flex-1 min-h-0 w-full"
+            className={cn(
+              "flex flex-1 min-h-0 w-full",
+              isMobile && "flex-col"
+            )}
           >
-            {/* Left: Tabbed view of affected apps (focus view) */}
+            {/* Left (desktop) / Bottom (mobile): Tabbed view of affected apps */}
             <div
               ref={leftPaneRef}
               id="agent-app-pane"
-              className="flex flex-col shrink-0 overflow-hidden bg-background/50 border-r border-border/60"
-              style={{
-                width: `${agentViewSplitRatio * 100}%`,
-                minWidth: MIN_PANE_WIDTH_PX,
-              }}
+              className={cn(
+                "flex flex-col overflow-hidden bg-background/50 border-border/60",
+                isMobile
+                  ? "min-h-0 flex-1 border-t order-2"
+                  : "shrink-0 border-r"
+              )}
+              style={
+                isMobile
+                  ? undefined
+                  : {
+                      width: `${agentViewSplitRatio * 100}%`,
+                      minWidth: MIN_PANE_WIDTH_PX,
+                    }
+              }
             >
               {affectedAppIds.length === 0 ? (
                 <div className="flex flex-1 flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground">
@@ -621,25 +641,32 @@ export function AgentView() {
               )}
             </div>
 
-            {/* Resizable divider */}
-            <div
-              role="separator"
-              aria-label="Resize panes"
-              className={cn(
-                "w-2 shrink-0 cursor-col-resize flex items-center justify-center bg-border/30 hover:bg-border/60 transition-colors",
-                isDraggingSplit && "bg-primary/20"
-              )}
-              style={{ touchAction: "none" }}
-              onPointerDown={handleSplitPointerDown}
-              onPointerMove={handleSplitPointerMove}
-              onPointerUp={handleSplitPointerUp}
-              onPointerLeave={handleSplitPointerUp}
-            >
-              <GripVertical className="size-4 text-muted-foreground" />
-            </div>
+            {/* Resizable divider - hidden on mobile (vertical stack) */}
+            {!isMobile && (
+              <div
+                role="separator"
+                aria-label="Resize panes"
+                className={cn(
+                  "w-2 shrink-0 cursor-col-resize flex items-center justify-center bg-border/30 hover:bg-border/60 transition-colors",
+                  isDraggingSplit && "bg-primary/20"
+                )}
+                style={{ touchAction: "none" }}
+                onPointerDown={handleSplitPointerDown}
+                onPointerMove={handleSplitPointerMove}
+                onPointerUp={handleSplitPointerUp}
+                onPointerLeave={handleSplitPointerUp}
+              >
+                <GripVertical className="size-4 text-muted-foreground" />
+              </div>
+            )}
 
-            {/* Right: Execution sequence (scrollable) + chat bar below */}
-            <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-[color-mix(in_oklch,var(--agent-accent-muted)_4%,transparent)]">
+            {/* Right (desktop) / Top (mobile): Execution sequence (scrollable) + chat bar below */}
+            <div
+              className={cn(
+                "flex flex-1 flex-col min-w-0 min-h-0 bg-[color-mix(in_oklch,var(--agent-accent-muted)_4%,transparent)]",
+                isMobile && "min-h-0 order-1"
+              )}
+            >
               {/* Scrollable execution list — auto-scrolls to latest */}
               <div
                 ref={executionScrollRef}
@@ -772,9 +799,9 @@ export function AgentView() {
             allAppsMinimized && "pointer-events-none"
           )}
           style={{
-            top: TOP_BAR_HEIGHT,
-            bottom: TASKBAR_HEIGHT_PX,
-            minHeight: `calc(100vh - ${TOP_BAR_HEIGHT}px - ${TASKBAR_HEIGHT_PX}px)`,
+            top: topBarHeight,
+            bottom: taskbarHeight,
+            minHeight: `calc(100vh - ${topBarHeight}px - ${taskbarHeight}px)`,
           }}
         >
           <AppRenderer layoutResult={layoutResult} activeModes={activeModes} />

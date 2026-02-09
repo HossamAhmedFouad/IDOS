@@ -38,7 +38,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md space-y-8">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold text-foreground">IDOS Settings</h1>
@@ -80,7 +80,11 @@ export default function SettingsPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={saved}>
+            <Button
+              type="submit"
+              disabled={saved}
+              className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)]"
+            >
               {saved ? "Saved" : "Save"}
             </Button>
             <Button
@@ -88,6 +92,7 @@ export default function SettingsPage() {
               variant="outline"
               onClick={handleClear}
               disabled={!value && !geminiApiKey}
+              className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)]"
             >
               Clear
             </Button>
@@ -98,10 +103,10 @@ export default function SettingsPage() {
           <Button
             type="button"
             variant="ghost"
-            className="gap-2 w-full sm:w-auto"
+            className="min-h-[var(--idos-touch-min,44px)] gap-2 w-full sm:w-auto"
             onClick={handleBackToIdos}
           >
-            <ArrowLeft className="size-4" />
+            <ArrowLeft className="size-4 shrink-0" />
             Back to IDOS
           </Button>
         </div>

@@ -330,7 +330,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       setActiveModes: (modes) =>
         set({
-          activeModes: modes.filter((m): m is SystemMode => m === "dark" || m === "dnd"),
+          activeModes: modes.filter((m): m is SystemMode => m === "dark"),
         }),
     }),
     {
@@ -393,7 +393,7 @@ export const useWorkspaceStore = create<WorkspaceState>()(
         }
         const merged = persisted as Record<string, unknown>;
         const rawModes = (merged?.activeModes as SystemMode[] | undefined) ?? [];
-        const activeModes = rawModes.filter((m): m is SystemMode => m === "dark" || m === "dnd");
+        const activeModes = rawModes.filter((m): m is SystemMode => m === "dark");
         return {
           ...merged,
           activeModes,

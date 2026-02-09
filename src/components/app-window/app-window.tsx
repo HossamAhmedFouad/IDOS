@@ -5,12 +5,12 @@ import { motion } from "framer-motion";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { MIN_WINDOW_WIDTH, MIN_WINDOW_HEIGHT } from "@/lib/constants/app-defaults";
 import { getAppIcon } from "@/lib/constants/app-icons";
-import { TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { useTaskbarHeight } from "@/hooks/use-taskbar-height";
+import { useTopBarHeight } from "@/hooks/use-top-bar-height";
 import { Button } from "@/components/ui/button";
 import type { AppId } from "@/lib/types";
 import { Minus, X } from "lucide-react";
 
-const TOP_BAR_HEIGHT = 48;
 
 const windowTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
 
@@ -33,6 +33,8 @@ interface AppWindowProps {
   showMinimize: boolean;
   otherApps?: OtherAppBounds[];
   children: React.ReactNode;
+  /** When true (mobile layout), resize is hidden and drag uses pointer events for touch. */
+  isMobileLayout?: boolean;
 }
 
 type ResizeHandle =
@@ -75,7 +77,9 @@ function applyMagneticSnap(
   return { x: outX, y: outY };
 }
 
-export function AppWindow({ appId, appType, title, x, y, width, height, showMinimize, otherApps = [], children }: AppWindowProps) {
+export function AppWindow({ appId, appType, title, x, y, width, height, showMinimize, otherApps = [], children, isMobileLayout = false }: AppWindowProps) {
+  const taskbarHeight = useTaskbarHeight();
+  const topBarHeight = useTopBarHeight();
   const updateAppPosition = useWorkspaceStore((s) => s.updateAppPosition);
   const snapToGridEnabled = useWorkspaceStore((s) => s.snapToGrid);
   const updateAppSize = useWorkspaceStore((s) => s.updateAppSize);
@@ -95,13 +99,59 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
     startAppY: number;
   } | null>(null);
 
-  const handleDragStart = useCallback(
-    (e: React.MouseEvent) => {
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if ((e.target as HTMLElement).closest("button")) return;
       e.preventDefault();
+      (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
       setIsDragging(true);
       setDragStart({ x: e.clientX, y: e.clientY, appX: x, appY: y });
     },
     [x, y]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const dx = e.clientX - dragStart.x;
+      const dy = e.clientY - dragStart.y;
+      const maxX = Math.max(0, window.innerWidth - width);
+      const maxY = Math.max(0, window.innerHeight - topBarHeight - taskbarHeight - height);
+      let newX = Math.max(0, Math.min(dragStart.appX + dx, maxX));
+      let newY = Math.max(0, Math.min(dragStart.appY + dy, maxY));
+      if (!isMobileLayout) {
+        const snapped = applyMagneticSnap(newX, newY, width, height, otherApps);
+        newX = snapped.x;
+        newY = snapped.y;
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+      }
+      updateAppPosition(appId, newX, newY);
+    },
+    [isDragging, dragStart, appId, width, height, otherApps, updateAppPosition, taskbarHeight, topBarHeight, isMobileLayout]
+  );
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent) => {
+      (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+      if (isDragging && snapToGridEnabled && !isMobileLayout) {
+        const state = useWorkspaceStore.getState();
+        const config = state.workspaces.find((w) => w.id === state.activeWorkspaceId)?.config;
+        const app = config?.apps.find((a) => a.id === appId);
+        if (app) {
+          const snappedX = snapToGrid(app.x);
+          const snappedY = snapToGrid(app.y);
+          const maxX = Math.max(0, window.innerWidth - width);
+          const maxY = Math.max(0, window.innerHeight - topBarHeight - taskbarHeight - height);
+          updateAppPosition(appId, Math.min(snappedX, maxX), Math.min(snappedY, maxY));
+        }
+      }
+      setIsDragging(false);
+      setIsResizing(false);
+      setResizeState(null);
+    },
+    [isDragging, snapToGridEnabled, isMobileLayout, width, appId, updateAppPosition, taskbarHeight, topBarHeight]
   );
 
   const handleMouseMove = useCallback(
@@ -110,7 +160,7 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         const dx = e.clientX - dragStart.x;
         const dy = e.clientY - dragStart.y;
         const maxX = Math.max(0, window.innerWidth - width);
-        const maxY = Math.max(0, window.innerHeight - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX - height);
+        const maxY = Math.max(0, window.innerHeight - topBarHeight - taskbarHeight - height);
         let newX = Math.max(0, Math.min(dragStart.appX + dx, maxX));
         let newY = Math.max(0, Math.min(dragStart.appY + dy, maxY));
         const snapped = applyMagneticSnap(newX, newY, width, height, otherApps);
@@ -148,7 +198,7 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         updateAppSize(appId, newW, newH, newX, newY);
       }
     },
-    [isDragging, dragStart, isResizing, resizeState, appId, width, height, otherApps, updateAppPosition, updateAppSize]
+    [isDragging, dragStart, isResizing, resizeState, appId, width, height, otherApps, updateAppPosition, updateAppSize, taskbarHeight, topBarHeight]
   );
 
   const handleMouseUp = useCallback(() => {
@@ -160,17 +210,17 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         const snappedX = snapToGrid(app.x);
         const snappedY = snapToGrid(app.y);
         const maxX = Math.max(0, window.innerWidth - width);
-        const maxY = Math.max(0, window.innerHeight - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX - height);
+        const maxY = Math.max(0, window.innerHeight - topBarHeight - taskbarHeight - height);
         updateAppPosition(appId, Math.min(snappedX, maxX), Math.min(snappedY, maxY));
       }
     }
     setIsDragging(false);
     setIsResizing(false);
     setResizeState(null);
-  }, [isDragging, snapToGridEnabled, width, appId, updateAppPosition]);
+  }, [isDragging, snapToGridEnabled, width, appId, updateAppPosition, taskbarHeight, topBarHeight]);
 
   useEffect(() => {
-    if (isDragging || isResizing) {
+    if (isResizing) {
       window.addEventListener("mousemove", handleMouseMove);
       window.addEventListener("mouseup", handleMouseUp);
       return () => {
@@ -178,7 +228,7 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         window.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
+  }, [isResizing, handleMouseMove, handleMouseUp]);
 
   const handleResizeStart = useCallback(
     (handle: ResizeHandle) => (e: React.MouseEvent) => {
@@ -219,10 +269,14 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
     >
       {/* Window chrome - overflow-hidden only on this inner div so resize handles aren't clipped */}
       <div className="absolute inset-0 overflow-hidden rounded-xl border border-border bg-card shadow-xl">
-        {/* Title bar - logo, drag area, minimize, close */}
+        {/* Title bar - logo, drag area (pointer for touch), minimize, close */}
         <div
           className={`flex cursor-grab items-center gap-2 border-b border-border/80 bg-muted/60 px-3 py-2 backdrop-blur-sm ${isDragging ? "cursor-grabbing" : ""}`}
-          onMouseDown={handleDragStart}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
+          style={{ touchAction: "none" }}
         >
           <AppIcon className="size-4 shrink-0 text-primary" aria-hidden />
           <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
@@ -234,13 +288,13 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-7"
+                className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] size-7 sm:size-7"
                 onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
                   setMinimized(appId, true);
                 }}
-                onMouseDown={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
                 aria-label="Minimize"
               >
                 <Minus className="size-4" />
@@ -250,13 +304,13 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
               type="button"
               variant="ghost"
               size="icon"
-              className="size-7"
+              className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] size-7 sm:size-7"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 removeApp(appId);
               }}
-              onMouseDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               aria-label="Close"
             >
               <X className="size-4" />
@@ -268,17 +322,18 @@ export function AppWindow({ appId, appType, title, x, y, width, height, showMini
         <div className="h-[calc(100%-40px)] overflow-auto bg-card">{children}</div>
       </div>
 
-      {/* Resize handles - outside overflow-hidden so they receive pointer events when extending past edges */}
-      {resizeHandles.map((handle) => (
-        <div
-          key={handle}
-          className="absolute z-10 bg-transparent"
-          style={{
-            ...getResizeHandleStyle(handle, width, height),
-          }}
-          onMouseDown={handleResizeStart(handle)}
-        />
-      ))}
+      {/* Resize handles - hidden on mobile layout; outside overflow-hidden so they receive pointer events when extending past edges */}
+      {!isMobileLayout &&
+        resizeHandles.map((handle) => (
+          <div
+            key={handle}
+            className="absolute z-10 bg-transparent"
+            style={{
+              ...getResizeHandleStyle(handle, width, height),
+            }}
+            onMouseDown={handleResizeStart(handle)}
+          />
+        ))}
     </motion.div>
   );
 }

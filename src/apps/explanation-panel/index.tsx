@@ -12,7 +12,7 @@ const TIPS = [
   {
     icon: Lightbulb,
     title: "Use system modes",
-    text: "Toggle Dark mode for night work and Do Not Disturb for meetings.",
+    text: "Toggle Dark mode for night work when you need to reduce eye strain.",
   },
   {
     icon: BookOpen,

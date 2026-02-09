@@ -18,7 +18,9 @@ import { IntentBlob } from "@/components/intent-blob";
 import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
-import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { Taskbar } from "@/components/taskbar";
+import { useTaskbarHeight } from "@/hooks/use-taskbar-height";
+import { useTopBarHeight } from "@/hooks/use-top-bar-height";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,7 +34,6 @@ import { cn } from "@/lib/utils";
 import { computeLayout } from "./layout-engine";
 import { AppRenderer } from "./app-renderer";
 
-const TOP_BAR_HEIGHT = 48;
 const INTENSITY_THRESHOLD = 12;
 
 const LOADING_MESSAGES = [
@@ -74,6 +75,8 @@ const SUGGESTION_PROMPTS = [
 ];
 
 export function HomeView() {
+  const taskbarHeight = useTaskbarHeight();
+  const topBarHeight = useTopBarHeight();
   const setView = useWorkspaceStore((s) => s.setView);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -158,11 +161,11 @@ export function HomeView() {
             viewport.width || 800,
             Math.max(
               200,
-              (viewport.height || 600) - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX
+              (viewport.height || 600) - topBarHeight - taskbarHeight
             )
           )
         : { apps: [] },
-    [hasWorkspaceApps, workspace, viewport.width, viewport.height]
+    [hasWorkspaceApps, workspace, viewport.width, viewport.height, taskbarHeight, topBarHeight]
   );
 
   const allAppsMinimized =
@@ -227,63 +230,66 @@ export function HomeView() {
         particleShape={particleShape}
       />
 
-      {/* Top bar: Fullscreen, Workspace, Agent */}
-      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
+      {/* Top bar: Fullscreen, Workspace, Agent; safe area + icon-only on mobile */}
+      <div
+        className="absolute left-0 right-0 top-0 z-40 flex min-h-14 min-w-0 items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-2 py-2 backdrop-blur-md sm:min-h-0 sm:px-4"
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
+      >
         <FullscreenButton />
-        <div className="flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            if (workspaces.length === 0) return;
-            setView("workspace");
-            if (activeWorkspaceId === null && workspaces[0]) {
-              setActiveWorkspace(workspaces[0].id);
+        <div className="flex min-h-[var(--idos-touch-min,44px)] items-center gap-1 sm:gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              if (workspaces.length === 0) return;
+              setView("workspace");
+              if (activeWorkspaceId === null && workspaces[0]) {
+                setActiveWorkspace(workspaces[0].id);
+              }
+            }}
+            disabled={workspaces.length === 0}
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] gap-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-3"
+            title={
+              workspaces.length === 0
+                ? "Create an intent to add a workspace"
+                : "Switch to workspace"
             }
-          }}
-          disabled={workspaces.length === 0}
-          className="gap-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          title={
-            workspaces.length === 0
-              ? "Create an intent to add a workspace"
-              : "Switch to workspace"
-          }
-        >
-          <LayoutGrid className="size-4" />
-          Workspace
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => hasGeminiKey && setView("agent")}
-          disabled={!hasGeminiKey}
-          className="gap-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
-          title={
-            hasGeminiKey
-              ? "Agent (Ctrl+K / Cmd+K to run)"
-              : "Set up Gemini API key in Settings"
-          }
-        >
-          <Sparkles className="size-4" />
-          Agent
-        </Button>
-        <Link
-          href="/settings"
-          className="inline-flex h-8 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-          title="Settings"
-        >
-          <Settings className="size-4" />
-          Settings
-        </Link>
+          >
+            <LayoutGrid className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Workspace</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => hasGeminiKey && setView("agent")}
+            disabled={!hasGeminiKey}
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] gap-2 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-3"
+            title={
+              hasGeminiKey
+                ? "Agent (Ctrl+K / Cmd+K to run)"
+                : "Set up Gemini API key in Settings"
+            }
+          >
+            <Sparkles className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Agent</span>
+          </Button>
+          <Link
+            href="/settings"
+            className="inline-flex min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] items-center justify-center gap-2 rounded-md p-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-8 sm:min-w-0 sm:px-3"
+            title="Settings"
+          >
+            <Settings className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Settings</span>
+          </Link>
         </div>
       </div>
 
       {/* Chat / intent area centered, above taskbar */}
       <div
         className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex items-center justify-center"
-        style={{ bottom: TASKBAR_HEIGHT_PX }}
+        style={{ bottom: taskbarHeight }}
       >
         <div
           ref={intentContainerRef}
@@ -304,7 +310,7 @@ export function HomeView() {
                 transition={{ duration: 0.2 }}
                 className="flex w-full flex-col items-center gap-6 pt-8"
               >
-                <p className="text-5xl font-bold text-foreground md:text-6xl [font-family:var(--font-pixel)]">
+                <p className="text-4xl font-bold text-foreground sm:text-5xl md:text-6xl [font-family:var(--font-pixel)]">
                   IDOS
                 </p>
                 <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl border border-border/80 bg-card/60 p-6 backdrop-blur-sm">
@@ -351,7 +357,7 @@ export function HomeView() {
                 className="flex w-full flex-col items-center gap-6"
               >
                 <motion.p
-                  className="text-5xl font-bold text-foreground md:text-6xl [font-family:var(--font-pixel)]"
+                  className="text-4xl font-bold text-foreground sm:text-5xl md:text-6xl [font-family:var(--font-pixel)]"
                   animate={{
                     opacity: intentLength > 0 ? 0 : 1,
                   }}
@@ -395,7 +401,7 @@ export function HomeView() {
                         intentInputRef.current?.focus();
                       }}
                       className={cn(
-                        "group relative overflow-hidden rounded-xl border border-border/80 bg-card/60 p-4 text-left backdrop-blur-sm",
+                        "group relative min-h-[var(--idos-touch-min,44px)] overflow-hidden rounded-xl border border-border/80 bg-card/60 p-4 text-left backdrop-blur-sm",
                         "transition-colors hover:border-primary/50 hover:bg-card/90 hover:shadow-lg hover:shadow-primary/5",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       )}
@@ -420,9 +426,9 @@ export function HomeView() {
             allAppsMinimized && "pointer-events-none"
           )}
           style={{
-            top: TOP_BAR_HEIGHT,
-            bottom: TASKBAR_HEIGHT_PX,
-            minHeight: `calc(100vh - ${TOP_BAR_HEIGHT}px - ${TASKBAR_HEIGHT_PX}px)`,
+            top: topBarHeight,
+            bottom: taskbarHeight,
+            minHeight: `calc(100vh - ${topBarHeight}px - ${taskbarHeight}px)`,
           }}
         >
           <AppRenderer layoutResult={layoutResult} activeModes={activeModes} />

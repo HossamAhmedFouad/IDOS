@@ -26,7 +26,7 @@ Respond ONLY with valid JSON in this exact shape (no markdown, no code blocks):
     }
   ],
   "layoutStrategy": "floating|grid|split|tiled",
-  "modes": ["dark", "dnd"]
+  "modes": ["dark"]
 }
 
 App type mapping:
@@ -44,7 +44,6 @@ App type mapping:
 
 Mode inference (add to modes array when intent suggests):
 - "dark": night, late, dark theme, reduce eye strain, evening
-- "dnd": meeting, presentation, do not disturb, no interruptions, busy
 
 Layout strategy:
 - "floating": default, free placement, overlapping windows
@@ -55,7 +54,7 @@ Layout strategy:
 Examples:
 - "take notes and set a 25 min timer" -> notes + timer
 - "deep work with notes and timer" -> notes + timer
-- "meeting prep: calendar and notes" -> calendar + notes, modes: [dnd]
+- "meeting prep: calendar and notes" -> calendar + notes
 - "code and browse files" -> code-editor + file-browser, layoutStrategy: split
 - "study for exam with flashcards and AI help" -> quiz + ai-chat
 - "write email draft" -> email with filePath
@@ -74,7 +73,7 @@ const VALID_APP_TYPES: AppId[] = [
   "terminal",
 ];
 const VALID_LAYOUTS: LayoutStrategy[] = ["floating", "grid", "split", "tiled"];
-const VALID_MODES: SystemMode[] = ["dark", "dnd"];
+const VALID_MODES: SystemMode[] = ["dark"];
 
 function validateAndSanitize(config: unknown): WorkspaceConfig {
   if (!config || typeof config !== "object") {

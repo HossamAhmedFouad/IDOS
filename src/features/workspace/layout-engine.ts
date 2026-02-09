@@ -1,9 +1,12 @@
 import type { AppInstance, WorkspaceConfig } from "@/lib/types";
 import type { LayoutStrategy } from "@/lib/types/layout";
 import { getAppMetadata } from "@/apps/registry";
+import { MOBILE_BREAKPOINT_PX } from "@/lib/constants/breakpoints";
 
 export interface LayoutResult {
   apps: AppInstance[];
+  /** True when layout was computed with mobile (narrow viewport) rules. */
+  isMobileLayout?: boolean;
 }
 
 const GRID_GAP = 8;
@@ -11,12 +14,17 @@ const GRID_COLS = 3;
 
 /**
  * Layout engine: computes pixel positions for apps based on workspace config and viewport.
+ * For viewport width below MOBILE_BREAKPOINT_PX, uses a single-column stacked layout (full width per app).
  */
 export function computeLayout(
   config: WorkspaceConfig,
   viewportWidth: number,
   viewportHeight: number
 ): LayoutResult {
+  const isNarrow = viewportWidth < MOBILE_BREAKPOINT_PX;
+  if (isNarrow) {
+    return computeMobileLayout(config.apps, viewportWidth, viewportHeight);
+  }
   switch (config.layoutStrategy) {
     case "floating":
       return computeFloatingLayout(config.apps, viewportWidth, viewportHeight);
@@ -29,6 +37,25 @@ export function computeLayout(
     default:
       return computeFloatingLayout(config.apps, viewportWidth, viewportHeight);
   }
+}
+
+/** Single-column stacked layout for narrow viewports: each app gets full width and equal share of height. */
+function computeMobileLayout(
+  apps: AppInstance[],
+  viewportWidth: number,
+  viewportHeight: number
+): LayoutResult {
+  if (apps.length === 0) return { apps: [], isMobileLayout: true };
+  const n = apps.length;
+  const heightPerApp = Math.max(150, Math.floor(viewportHeight / n));
+  const result: AppInstance[] = apps.map((app, i) => ({
+    ...app,
+    x: 0,
+    y: i * heightPerApp,
+    width: viewportWidth,
+    height: i === n - 1 ? viewportHeight - (n - 1) * heightPerApp : heightPerApp,
+  }));
+  return { apps: result, isMobileLayout: true };
 }
 
 function computeFloatingLayout(

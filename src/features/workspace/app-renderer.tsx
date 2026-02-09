@@ -54,6 +54,7 @@ export function AppRenderer({ layoutResult, activeModes }: AppRendererProps) {
             height={app.height}
             showMinimize={showMinimize}
             otherApps={otherApps}
+            isMobileLayout={layoutResult.isMobileLayout}
           >
             <Suspense fallback={<AppLoadingFallback />}>
               <Component {...appProps} />

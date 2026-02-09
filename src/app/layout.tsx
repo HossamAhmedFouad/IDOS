@@ -24,6 +24,12 @@ export const metadata: Metadata = {
   description: "An Intent-Driven Operating System built as a web application",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

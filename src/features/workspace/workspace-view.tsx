@@ -15,23 +15,25 @@ import { AppRenderer } from "./app-renderer";
 import { ParticleBackground } from "@/components/particle-background";
 import { GeometricField } from "@/components/geometric-field";
 import { WallpaperBackground } from "@/components/wallpaper-background";
-import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
+import { Taskbar } from "@/components/taskbar";
+import { useTaskbarHeight } from "@/hooks/use-taskbar-height";
+import { useTopBarHeight } from "@/hooks/use-top-bar-height";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star, Sparkles, Settings } from "lucide-react";
+import { Home, LayoutGrid, Plus, Pencil, Trash2, Layout, Star, Sparkles, Settings, MoreHorizontal } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { LayoutStrategy } from "@/lib/types/layout";
 
-const TOP_BAR_HEIGHT = 48;
 
 export function WorkspaceView() {
+  const taskbarHeight = useTaskbarHeight();
+  const topBarHeight = useTopBarHeight();
   const workspace = useWorkspaceStore(selectActiveWorkspaceConfig);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const activeModes = useWorkspaceStore((s) => s.activeModes);
-  const setActiveModes = useWorkspaceStore((s) => s.setActiveModes);
   const setActiveWorkspace = useWorkspaceStore((s) => s.setActiveWorkspace);
   const removeWorkspace = useWorkspaceStore((s) => s.removeWorkspace);
   const updateWorkspaceLabel = useWorkspaceStore((s) => s.updateWorkspaceLabel);
@@ -79,15 +81,6 @@ export function WorkspaceView() {
     return () => window.removeEventListener("resize", updateViewport);
   }, []);
 
-  const isDnd = activeModes.includes("dnd");
-
-  const toggleMode = (mode: "dnd") => {
-    const active = activeModes.includes(mode);
-    setActiveModes(
-      active ? activeModes.filter((m) => m !== mode) : [...activeModes, mode]
-    );
-  };
-
   const clearWorkspace = () => {
     updateActiveWorkspaceConfig({
       ...defaultWorkspaceConfig,
@@ -126,9 +119,9 @@ export function WorkspaceView() {
       computeLayout(
         workspace,
         viewport.width || 800,
-        Math.max(200, (viewport.height || 600) - TOP_BAR_HEIGHT - TASKBAR_HEIGHT_PX)
+        Math.max(200, (viewport.height || 600) - topBarHeight - taskbarHeight)
       ),
-    [workspace, viewport.width, viewport.height]
+    [workspace, viewport.width, viewport.height, taskbarHeight, topBarHeight]
   );
 
   const minimizedAppIds = useWorkspaceStore(selectMinimizedAppIds);
@@ -157,22 +150,25 @@ export function WorkspaceView() {
         particleSystem={particleSystem}
         particleShape={particleShape}
       />
-      {/* Thin top bar: Fullscreen, Home, Workspace switcher, Clear, Dark toggle */}
-      <div className="absolute left-0 right-0 top-0 z-40 flex items-center justify-between gap-4 border-b border-border/80 bg-background/80 px-4 py-2 backdrop-blur-md">
-        <div className="flex min-w-0 shrink items-center gap-2">
+      {/* Thin top bar: Fullscreen, Home, Workspace switcher, nav; safe area + More menu on mobile */}
+      <div
+        className="absolute left-0 right-0 top-0 z-40 flex min-h-14 min-w-0 items-center justify-between gap-2 border-b border-border/80 bg-background/80 px-2 py-2 backdrop-blur-md sm:min-h-0 sm:gap-4 sm:px-4"
+        style={{ paddingTop: "max(0.5rem, env(safe-area-inset-top, 0px))" }}
+      >
+        <div className="flex min-w-0 shrink items-center gap-1 sm:gap-2">
           <FullscreenButton />
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => setView("home")}
-            className="gap-2 shrink-0 text-muted-foreground hover:text-foreground"
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 gap-2 p-2 text-muted-foreground hover:text-foreground sm:min-h-0 sm:min-w-0 sm:px-3"
           >
-            <Home className="size-4" />
-            Home
+            <Home className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Home</span>
           </Button>
           {workspaces.length > 0 && (
-            <div className="flex items-center gap-1 overflow-x-auto">
+            <div className="flex min-h-[var(--idos-touch-min,44px)] items-center gap-1 overflow-x-auto sm:min-h-0">
               {sortedWorkspaces.map((w) => (
                 <div
                   key={w.id}
@@ -262,121 +258,163 @@ export function WorkspaceView() {
             size="sm"
             onClick={() => hasGeminiKey && setView("agent")}
             disabled={!hasGeminiKey}
-            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 gap-1.5 p-2 text-muted-foreground hover:text-foreground disabled:opacity-50 sm:min-h-0 sm:min-w-0 sm:px-3"
             title={
               hasGeminiKey
                 ? "Agent (Ctrl+K / Cmd+K to run)"
                 : "Set up Gemini API key in Settings"
             }
           >
-            <Sparkles className="size-4" />
-            Agent
+            <Sparkles className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Agent</span>
           </Button>
           <Link
             href="/settings"
-            className="inline-flex h-8 shrink-0 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="inline-flex min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 items-center justify-center gap-1.5 rounded-md p-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:min-h-8 sm:min-w-0 sm:px-3"
             title="Settings"
           >
-            <Settings className="size-4" />
-            Settings
+            <Settings className="size-4 shrink-0" />
+            <span className="hidden sm:inline">Settings</span>
           </Link>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={handleNewWorkspace}
-            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground"
-            title="New workspace"
-          >
-            <Plus className="size-4" />
-            New
-          </Button>
-          {hasActiveWorkspace && layoutResult.apps.length > 0 && (
-            <>
+          {/* Desktop: New, Clear, Layout inline; mobile: in More menu */}
+          <span className="hidden sm:inline-flex sm:items-center sm:gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleNewWorkspace}
+              className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+              title="New workspace"
+            >
+              <Plus className="size-4" />
+              New
+            </Button>
+            {hasActiveWorkspace && layoutResult.apps.length > 0 && (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearWorkspace}
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  Clear workspace
+                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                      title="Layout"
+                    >
+                      <Layout className="size-4" />
+                      <span className="capitalize">{layoutStrategy}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-48 p-2">
+                    <div className="mb-2 px-2 py-1 text-xs font-medium text-muted-foreground">
+                      Layout
+                    </div>
+                    {(["floating", "grid", "split", "tiled"] as LayoutStrategy[]).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setLayoutStrategy(s)}
+                        className={cn(
+                          "w-full rounded px-3 py-2 text-left text-sm capitalize",
+                          layoutStrategy === s
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                    <div className="mt-2 border-t border-border pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setSnapToGrid(!snapToGrid)}
+                        className={cn(
+                          "w-full rounded px-3 py-2 text-left text-sm",
+                          snapToGrid ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        Snap to grid
+                      </button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              </>
+            )}
+          </span>
+          {/* Mobile: More menu with New, Clear, Layout */}
+          <Popover>
+            <PopoverTrigger asChild>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={clearWorkspace}
-                className="shrink-0 text-muted-foreground hover:text-foreground"
+                className="min-h-[var(--idos-touch-min,44px)] min-w-[var(--idos-touch-min,44px)] shrink-0 p-2 text-muted-foreground hover:text-foreground sm:hidden"
+                aria-label="More options"
+                title="More"
               >
-                Clear workspace
+                <MoreHorizontal className="size-5" />
               </Button>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56 p-2">
+              <button
+                type="button"
+                onClick={handleNewWorkspace}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-foreground hover:bg-accent"
+              >
+                <Plus className="size-4 shrink-0" />
+                New workspace
+              </button>
+              {hasActiveWorkspace && layoutResult.apps.length > 0 && (
+                <>
+                  <button
                     type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
-                    title="Layout"
+                    onClick={clearWorkspace}
+                    className="flex w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-sm text-foreground hover:bg-accent"
                   >
-                    <Layout className="size-4" />
-                    <span className="capitalize">{layoutStrategy}</span>
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent align="end" className="w-48 p-2">
-                  <div className="mb-2 px-2 py-1 text-xs font-medium text-muted-foreground">
-                    Layout
-                  </div>
-                  {(["floating", "grid", "split", "tiled"] as LayoutStrategy[]).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setLayoutStrategy(s)}
-                      className={cn(
-                        "w-full rounded px-3 py-2 text-left text-sm capitalize",
-                        layoutStrategy === s
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-accent hover:text-foreground"
-                      )}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                  <div className="mt-2 border-t border-border pt-2">
+                    Clear workspace
+                  </button>
+                  <div className="my-2 border-t border-border pt-2">
+                    <div className="mb-1 px-2 py-1 text-xs font-medium text-muted-foreground">Layout</div>
+                    {(["floating", "grid", "split", "tiled"] as LayoutStrategy[]).map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setLayoutStrategy(s)}
+                        className={cn(
+                          "w-full rounded px-3 py-2 text-left text-sm capitalize",
+                          layoutStrategy === s
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-accent hover:text-foreground"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       onClick={() => setSnapToGrid(!snapToGrid)}
                       className={cn(
-                        "w-full rounded px-3 py-2 text-left text-sm",
+                        "mt-1 w-full rounded px-3 py-2 text-left text-sm",
                         snapToGrid ? "bg-primary/10 text-primary" : "hover:bg-accent hover:text-foreground"
                       )}
                     >
                       Snap to grid
                     </button>
                   </div>
-                </PopoverContent>
-              </Popover>
-            </>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => toggleMode("dnd")}
-            title="Do Not Disturb"
-            className={cn(
-              "shrink-0 text-muted-foreground hover:text-foreground",
-              isDnd && "bg-primary/10 text-primary"
-            )}
-          >
-            DND
-          </Button>
+                </>
+              )}
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
-
-      {/* DND status indicator overlay */}
-      {isDnd && (
-        <div
-          className="pointer-events-none absolute bottom-16 right-4 z-50 rounded-lg border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 text-sm font-medium text-amber-400"
-          aria-hidden
-        >
-          Do Not Disturb
-        </div>
-      )}
 
       {/* App windows container - offset for top bar and taskbar; allow passthrough when all minimized */}
       <div
@@ -385,9 +423,9 @@ export function WorkspaceView() {
           allAppsMinimized && "pointer-events-none"
         )}
         style={{
-          top: TOP_BAR_HEIGHT,
-          bottom: TASKBAR_HEIGHT_PX,
-          minHeight: `calc(100vh - ${TOP_BAR_HEIGHT}px - ${TASKBAR_HEIGHT_PX}px)`,
+          top: topBarHeight,
+          bottom: taskbarHeight,
+          minHeight: `calc(100vh - ${topBarHeight}px - ${taskbarHeight}px)`,
         }}
       >
         {noWorkspaces ? (

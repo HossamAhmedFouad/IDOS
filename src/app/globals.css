@@ -50,6 +50,16 @@
   --radius-4xl: calc(var(--radius) + 16px);
 }
 
+/* IDOS: Mobile breakpoint (align with Tailwind sm: 640px) and safe area */
+:root {
+  --idos-mobile-breakpoint: 640px;
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --idos-touch-min: 44px;
+}
+
 /* IDOS: Dark mode only */
 :root {
   --radius: 0.625rem;
@@ -215,6 +225,16 @@
     background: var(--muted);
     border-radius: 0 0 var(--radius) 0;
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
 }
 
 /* IDOS home title: calm color glitch in agent mode — cyan + red tint, original text color */
@@ -247,8 +267,6 @@
 .idos-title-glitch {
   animation: idos-title-glitch 8s steps(1) infinite;
 }
-
-/* DND mode: visual indicator available via [data-dnd="true"] */
 
 /* Quiz app: 3D flip card */
 .flip-card-container {
