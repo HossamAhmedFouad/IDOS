@@ -5,6 +5,11 @@ import {
   buildAgentSystemInstruction,
   MAX_ITERATIONS,
 } from "@/lib/gemini/agent-client";
+import {
+  isInvalidApiKeyError,
+  INVALID_API_KEY_MESSAGE,
+  API_KEY_INVALID_CODE,
+} from "@/lib/gemini/api-key-error";
 import { agentSessions, cleanupSessions } from "./session-store";
 
 function sendSSE(
@@ -17,12 +22,16 @@ function sendSSE(
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey =
+  const headerKey = request.headers.get("x-gemini-api-key")?.trim();
+  const envKey =
     process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  const apiKey = headerKey && headerKey.length > 0 ? headerKey : envKey;
   if (!apiKey) {
     return new Response(
-      JSON.stringify({ error: "GEMINI_API_KEY is not configured" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({
+        error: "Gemini API key is required. Add it in Settings.",
+      }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
     );
   }
 
@@ -137,8 +146,15 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        sendSSE(controller, "error", { message });
+        const message = isInvalidApiKeyError(err)
+          ? INVALID_API_KEY_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Unknown error";
+        sendSSE(controller, "error", {
+          message,
+          ...(isInvalidApiKeyError(err) && { code: API_KEY_INVALID_CODE }),
+        });
       } finally {
         controller.close();
       }

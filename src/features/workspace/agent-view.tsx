@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, useRef } from "react";
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star, GripVertical, Loader2 } from "lucide-react";
+import { LayoutGrid, Home, Play, Sparkles, Plus, Pencil, Trash2, Star, GripVertical, Loader2, Settings } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
   selectMinimizedAppIds,
 } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
+import { useSettingsStore } from "@/store/use-settings-store";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentSessionsStore } from "@/store/use-agent-sessions-store";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
@@ -94,6 +96,8 @@ export function AgentView() {
   const setSessionFavorite = useAgentSessionsStore((s) => s.setSessionFavorite);
   const openAgentRunDialog = useAgentStore((s) => s.openAgentRunDialog);
 
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
+  const hasGeminiKey = !!geminiApiKey?.trim();
   const backgroundType = usePersonalizationStore((s) => s.backgroundType);
   const particleSystem = usePersonalizationStore((s) => s.particleSystem);
   const particleShape = usePersonalizationStore((s) => s.particleShape);
@@ -481,9 +485,10 @@ export function AgentView() {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={openAgentRunDialog}
-            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground"
-            title="New agent task"
+            onClick={() => hasGeminiKey && openAgentRunDialog()}
+            disabled={!hasGeminiKey}
+            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            title={hasGeminiKey ? "New agent task" : "Set up Gemini API key in Settings"}
           >
             <Plus className="size-4" />
             New
@@ -503,18 +508,29 @@ export function AgentView() {
               No agent sessions yet
             </h2>
             <p className="max-w-md text-sm text-muted-foreground">
-              Run your first agent task from Home or use the shortcut Ctrl+K (Cmd+K on Mac).
+              {hasGeminiKey
+                ? "Run your first agent task from Home or use the shortcut Ctrl+K (Cmd+K on Mac)."
+                : "Add your Gemini API key in Settings to use the agent."}
             </p>
             <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="default"
-                onClick={openAgentRunDialog}
-                className="gap-2"
-              >
-                <Sparkles className="size-4" />
-                Run agent task
-              </Button>
+              {hasGeminiKey ? (
+                <Button
+                  type="button"
+                  variant="default"
+                  onClick={openAgentRunDialog}
+                  className="gap-2"
+                >
+                  <Sparkles className="size-4" />
+                  Run agent task
+                </Button>
+              ) : (
+                <Link href="/settings">
+                  <Button type="button" variant="default" className="gap-2">
+                    <Settings className="size-4" />
+                    Open Settings
+                  </Button>
+                </Link>
+              )}
               <Button
                 type="button"
                 variant="outline"
@@ -712,13 +728,25 @@ export function AgentView() {
               {hasActiveSession && (
                 <div className="shrink-0 border-t border-border/60 bg-background/60 px-3 py-2">
                   <div className="mx-auto max-w-4xl w-full">
-                    <IntentInput
-                      submitIcon={Play}
-                      submitLabel="Run"
-                      onAgentSubmit={handleRunAnother}
-                      keepLoadingAfterAgentSubmit
-                      loading={isExecuting}
-                    />
+                    {hasGeminiKey ? (
+                      <IntentInput
+                        submitIcon={Play}
+                        submitLabel="Run"
+                        onAgentSubmit={handleRunAnother}
+                        keepLoadingAfterAgentSubmit
+                        loading={isExecuting}
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                        Add your Gemini API key in Settings to run another task.
+                        <Link href="/settings">
+                          <Button variant="link" size="sm" className="gap-1 h-auto p-0">
+                            <Settings className="size-3.5" />
+                            Open Settings
+                          </Button>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

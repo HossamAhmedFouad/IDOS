@@ -1,5 +1,10 @@
 import { NextRequest } from "next/server";
 import { agentSessions, cleanupSessions } from "../session-store";
+import {
+  isInvalidApiKeyError,
+  INVALID_API_KEY_MESSAGE,
+  API_KEY_INVALID_CODE,
+} from "@/lib/gemini/api-key-error";
 
 function sendSSE(
   controller: ReadableStreamDefaultController<Uint8Array>,
@@ -96,8 +101,15 @@ export async function POST(request: NextRequest) {
           });
         }
       } catch (err) {
-        const message = err instanceof Error ? err.message : "Unknown error";
-        sendSSE(controller, "error", { message });
+        const message = isInvalidApiKeyError(err)
+          ? INVALID_API_KEY_MESSAGE
+          : err instanceof Error
+            ? err.message
+            : "Unknown error";
+        sendSSE(controller, "error", {
+          message,
+          ...(isInvalidApiKeyError(err) && { code: API_KEY_INVALID_CODE }),
+        });
       } finally {
         controller.close();
       }

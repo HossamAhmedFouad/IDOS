@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { ChevronDown, LayoutGrid, Sparkles, Paperclip, X } from "lucide-react";
 import type { WorkspaceConfig } from "@/lib/types/workspace";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
+import { useSettingsStore } from "@/store/use-settings-store";
 import { readFile } from "@/lib/file-system";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,6 +86,7 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
   const [attachmentPickerOpen, setAttachmentPickerOpen] = useState(false);
   const createWorkspace = useWorkspaceStore((s) => s.createWorkspace);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -193,7 +195,12 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
       try {
         const res = await fetch("/api/parse-intent", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            ...(geminiApiKey?.trim() && {
+              "X-Gemini-API-Key": geminiApiKey.trim(),
+            }),
+          },
           body: JSON.stringify({ intent: text }),
         });
         let data: { error?: string; workspace?: unknown } = {};
@@ -230,6 +237,7 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
       onSuccess,
       onAgentSubmit,
       keepLoadingAfterAgentSubmit,
+      geminiApiKey,
     ]
   );
 

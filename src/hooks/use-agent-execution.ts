@@ -8,6 +8,7 @@ import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
 } from "@/store/use-workspace-store";
+import { useSettingsStore } from "@/store/use-settings-store";
 import { uiUpdateExecutor } from "@/lib/uiUpdateExecutor";
 import { clearWhiteboardForNewRun } from "@/apps/whiteboard/tools";
 import type { AgentEvent, AttachedFile, ToolResult } from "@/lib/types/agent";
@@ -158,6 +159,7 @@ export function useAgentExecution() {
   const createSession = useAgentSessionsStore((s) => s.createSession);
   const updateSession = useAgentSessionsStore((s) => s.updateSession);
   const setView = useWorkspaceStore((s) => s.setView);
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
 
   const executeIntent = useCallback(
     async (
@@ -366,7 +368,12 @@ export function useAgentExecution() {
               }
               return fetch("/api/agent-execute", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(geminiApiKey?.trim() && {
+                    "X-Gemini-API-Key": geminiApiKey.trim(),
+                  }),
+                },
                 body: JSON.stringify(body),
               });
             })());
@@ -468,6 +475,7 @@ export function useAgentExecution() {
       createSession,
       updateSession,
       setView,
+      geminiApiKey,
     ]
   );
 

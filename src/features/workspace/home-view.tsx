@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Play, Sparkles } from "lucide-react";
+import { LayoutGrid, Play, Sparkles, Settings } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
   selectMinimizedAppIds,
 } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
+import { useSettingsStore } from "@/store/use-settings-store";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useAgentExecution } from "@/hooks/use-agent-execution";
 import { IntentInput, type IntentInputHandle } from "@/features/intent/intent-input";
@@ -77,6 +79,8 @@ export function HomeView() {
   const homeAgentMode = useAgentStore((s) => s.homeAgentMode);
   const setHomeAgentMode = useAgentStore((s) => s.setHomeAgentMode);
   const { executeIntent } = useAgentExecution();
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
+  const hasGeminiKey = !!geminiApiKey?.trim();
   const [loading, setLoading] = useState(false);
 
   const handleAgentSubmit = useCallback(
@@ -245,9 +249,14 @@ export function HomeView() {
           type="button"
           variant="ghost"
           size="sm"
-          onClick={() => setView("agent")}
-          className="gap-2 text-muted-foreground hover:text-foreground"
-          title="Agent (Ctrl+K / Cmd+K to run)"
+          onClick={() => hasGeminiKey && setView("agent")}
+          disabled={!hasGeminiKey}
+          className="gap-2 text-muted-foreground hover:text-foreground disabled:opacity-50"
+          title={
+            hasGeminiKey
+              ? "Agent (Ctrl+K / Cmd+K to run)"
+              : "Set up Gemini API key in Settings"
+          }
         >
           <Sparkles className="size-4" />
           Agent
@@ -270,7 +279,31 @@ export function HomeView() {
             loading={loading}
           />
           <AnimatePresence mode="wait">
-            {loading ? (
+            {!hasGeminiKey ? (
+              <motion.div
+                key="api-key-required"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="flex w-full flex-col items-center gap-6 pt-8"
+              >
+                <p className="text-5xl font-bold text-foreground md:text-6xl [font-family:var(--font-pixel)]">
+                  IDOS
+                </p>
+                <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-xl border border-border/80 bg-card/60 p-6 backdrop-blur-sm">
+                  <p className="text-center text-sm text-muted-foreground">
+                    Add your Gemini API key in Settings to use the agent.
+                  </p>
+                  <Link href="/settings">
+                    <Button className="gap-2">
+                      <Settings className="size-4" />
+                      Open Settings
+                    </Button>
+                  </Link>
+                </div>
+              </motion.div>
+            ) : loading ? (
               <motion.div
                 key="loading-messages"
                 initial={{ opacity: 0, y: 8 }}

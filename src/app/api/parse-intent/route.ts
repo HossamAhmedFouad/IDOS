@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import {
+  isInvalidApiKeyError,
+  INVALID_API_KEY_MESSAGE,
+  API_KEY_INVALID_CODE,
+} from "@/lib/gemini/api-key-error";
 import type { AppId, AppInstance, WorkspaceConfig } from "@/lib/types";
 import type { LayoutStrategy } from "@/lib/types/layout";
 import type { SystemMode } from "@/lib/types/modes";
@@ -116,11 +121,14 @@ function validateAndSanitize(config: unknown): WorkspaceConfig {
 
 export async function POST(request: Request) {
   try {
-    const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const headerKey = request.headers.get("x-gemini-api-key")?.trim();
+    const envKey =
+      process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    const apiKey = headerKey && headerKey.length > 0 ? headerKey : envKey;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured" },
-        { status: 500 }
+        { error: "Gemini API key is required. Add it in Settings." },
+        { status: 401 }
       );
     }
 
@@ -151,6 +159,12 @@ export async function POST(request: Request) {
     const workspace = validateAndSanitize(parsed);
     return NextResponse.json({ workspace });
   } catch (err) {
+    if (isInvalidApiKeyError(err)) {
+      return NextResponse.json(
+        { error: INVALID_API_KEY_MESSAGE, code: API_KEY_INVALID_CODE },
+        { status: 401 }
+      );
+    }
     const message = err instanceof Error ? err.message : "Unknown error";
     return NextResponse.json(
       { error: message },

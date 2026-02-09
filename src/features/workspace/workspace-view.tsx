@@ -8,6 +8,7 @@ import {
   defaultWorkspaceConfig,
 } from "@/store/use-workspace-store";
 import { usePersonalizationStore } from "@/store/use-personalization-store";
+import { useSettingsStore } from "@/store/use-settings-store";
 import { computeLayout } from "./layout-engine";
 import { AppRenderer } from "./app-renderer";
 import { ParticleBackground } from "@/components/particle-background";
@@ -43,6 +44,8 @@ export function WorkspaceView() {
   const snapToGrid = useWorkspaceStore((s) => s.snapToGrid);
   const setSnapToGrid = useWorkspaceStore((s) => s.setSnapToGrid);
   const setWorkspaceFavorite = useWorkspaceStore((s) => s.setWorkspaceFavorite);
+  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
+  const hasGeminiKey = !!geminiApiKey?.trim();
   const backgroundType = usePersonalizationStore((s) => s.backgroundType);
   const particleSystem = usePersonalizationStore((s) => s.particleSystem);
   const particleShape = usePersonalizationStore((s) => s.particleShape);
@@ -258,9 +261,14 @@ export function WorkspaceView() {
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() => setView("agent")}
-            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground"
-            title="Agent (Ctrl+K / Cmd+K to run)"
+            onClick={() => hasGeminiKey && setView("agent")}
+            disabled={!hasGeminiKey}
+            className="gap-1.5 shrink-0 text-muted-foreground hover:text-foreground disabled:opacity-50"
+            title={
+              hasGeminiKey
+                ? "Agent (Ctrl+K / Cmd+K to run)"
+                : "Set up Gemini API key in Settings"
+            }
           >
             <Sparkles className="size-4" />
             Agent

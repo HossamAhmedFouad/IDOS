@@ -1,9 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useAgentStore } from "@/store/use-agent-store";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { MarkdownContent } from "@/components/markdown-content";
+import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 import type { AgentEvent } from "@/lib/types/agent";
+
+const API_KEY_INVALID_CODE = "API_KEY_INVALID";
 
 function AgentCardBody({ text }: { text: string }) {
   return <MarkdownContent content={text} />;
@@ -89,7 +94,8 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
   }
 
   if (event.type === "error") {
-    const d = event.data as { message?: string };
+    const d = event.data as { message?: string; code?: string };
+    const isApiKeyInvalid = d.code === API_KEY_INVALID_CODE;
     return (
       <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-3">
         <div className="mb-1 text-xs font-medium text-destructive">
@@ -98,6 +104,14 @@ export function AgentEventCard({ event }: { event: AgentEvent }) {
         <div className="text-sm text-foreground">
           <AgentCardBody text={d.message ?? "Unknown error"} />
         </div>
+        {isApiKeyInvalid && (
+          <Link href="/settings" className="mt-2 inline-block">
+            <Button variant="outline" size="sm" className="gap-1.5 h-8">
+              <Settings className="size-3.5" />
+              Open Settings
+            </Button>
+          </Link>
+        )}
       </div>
     );
   }

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import Link from "next/link";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Search } from "lucide-react";
+import { LayoutGrid, Search, Settings } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
@@ -252,6 +253,14 @@ export function Taskbar() {
             document.body
           )}
       </div>
+      <Link
+        href="/settings"
+        className="flex shrink-0 items-center justify-center rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        aria-label="Settings"
+        title="Settings"
+      >
+        <Settings className="size-5" />
+      </Link>
     </motion.div>
   );
 }

@@ -1,10 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight, Settings } from "lucide-react";
 import { MarkdownContent } from "@/components/markdown-content";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AgentEvent } from "@/lib/types/agent";
+
+const API_KEY_INVALID_CODE = "API_KEY_INVALID";
 
 export type ExecutionStep =
   | { kind: "tool"; toolCall: AgentEvent; toolResult: AgentEvent | null }
@@ -71,13 +75,22 @@ export function AgentExecutionStepCard({
       );
     }
     if (e.type === "error") {
-      const d = e.data as { message?: string };
+      const d = e.data as { message?: string; code?: string };
+      const isApiKeyInvalid = d.code === API_KEY_INVALID_CODE;
       return (
         <div className="rounded-lg border border-destructive/40 bg-destructive/10 p-2.5">
           <div className="mb-0.5 text-xs font-medium text-destructive">Error</div>
           <div className="text-sm text-foreground">
             <MarkdownContent content={d.message ?? "Unknown error"} />
           </div>
+          {isApiKeyInvalid && (
+            <Link href="/settings" className="mt-2 inline-block">
+              <Button variant="outline" size="sm" className="gap-1.5 h-8">
+                <Settings className="size-3.5" />
+                Open Settings
+              </Button>
+            </Link>
+          )}
         </div>
       );
     }
