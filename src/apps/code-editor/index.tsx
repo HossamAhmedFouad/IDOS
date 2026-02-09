@@ -7,6 +7,7 @@ import {
   writeFile,
   listDirectory,
   createDirectory,
+  deleteFile,
 } from "@/lib/file-system";
 import { useWorkspaceStore } from "@/store/use-workspace-store";
 import { useToolRegistry } from "@/store/use-tool-registry";
@@ -61,6 +62,112 @@ function dirname(path: string): string {
   return p.slice(0, last);
 }
 
+/** Resolve a path relative to the document directory (baseDir). All refs are relative to the HTML file. */
+function resolvePath(baseDir: string, raw: string): string {
+  let p = raw.replace(/\\/g, "/").trim();
+  if (!p) return baseDir;
+  // Treat leading slash as relative to doc dir (e.g. /x.css from /a/b/c -> /a/b/c/x.css)
+  if (p.startsWith("/")) p = p.slice(1);
+  const base = baseDir.endsWith("/") ? baseDir : baseDir + "/";
+  p = base + p;
+  const parts = p.split("/").filter(Boolean);
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === ".") continue;
+    if (part === "..") {
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return "/" + out.join("/");
+}
+
+const PREVIEW_TEMP_DIR = "/.idos-preview";
+
+/** Script with src: match full tag including closing so we replace entirely. */
+const SCRIPT_SRC_REGEX = /<script\s[^>]*\ssrc=["']([^"']+)["'][^>]*>\s*<\/script>/gi;
+/** Link stylesheet: rel then href. */
+const LINK_REL_FIRST = /<link\s+[^>]*rel=["']stylesheet["'][^>]*href=["']([^"']+)["'][^>]*\/?>/gi;
+/** Link stylesheet: href then rel. */
+const LINK_HREF_FIRST = /<link\s+[^>]*href=["']([^"']+)["'][^>]*rel=["']stylesheet["'][^>]*\/?>/gi;
+
+interface ResourceMatch {
+  index: number;
+  length: number;
+  path: string;
+  type: "script" | "style";
+  fullTag: string;
+}
+
+function* findResourceMatches(html: string): Generator<ResourceMatch> {
+  SCRIPT_SRC_REGEX.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = SCRIPT_SRC_REGEX.exec(html)) !== null) {
+    const path = m[1];
+    yield { index: m.index, length: m[0].length, path, type: "script", fullTag: m[0] };
+  }
+  LINK_REL_FIRST.lastIndex = 0;
+  while ((m = LINK_REL_FIRST.exec(html)) !== null) {
+    yield { index: m.index, length: m[0].length, path: m[1], type: "style", fullTag: m[0] };
+  }
+  LINK_HREF_FIRST.lastIndex = 0;
+  while ((m = LINK_HREF_FIRST.exec(html)) !== null) {
+    yield { index: m.index, length: m[0].length, path: m[1], type: "style", fullTag: m[0] };
+  }
+}
+
+function dedupeOverlappingMatches(matches: ResourceMatch[]): ResourceMatch[] {
+  const sorted = [...matches].sort((a, b) => a.index - b.index);
+  const out: ResourceMatch[] = [];
+  for (const m of sorted) {
+    const overlaps = out.some(
+      (prev) => m.index < prev.index + prev.length
+    );
+    if (!overlaps) out.push(m);
+  }
+  return out;
+}
+
+async function buildHtmlPreviewWithLinkedAssets(
+  htmlContent: string,
+  htmlDir: string,
+  readFileFn: (path: string) => Promise<string>
+): Promise<string> {
+  const matches = dedupeOverlappingMatches(
+    Array.from(findResourceMatches(htmlContent)).sort((a, b) => a.index - b.index)
+  );
+  const replacements: { index: number; length: number; newContent: string }[] = [];
+  for (const match of matches) {
+    const resolvedPath = resolvePath(htmlDir, match.path);
+    let content: string;
+    try {
+      content = await readFileFn(resolvedPath);
+    } catch {
+      if (match.type === "script") {
+        content = `console.error("Failed to load: ${resolvedPath}");`;
+      } else {
+        content = `/* Failed to load: ${resolvedPath} */`;
+      }
+    }
+    const newContent =
+      match.type === "script"
+        ? `<script>${content.replace(/<\/script>/gi, "<\\/script>")}</script>`
+        : `<style>${content}</style>`;
+    replacements.push({ index: match.index, length: match.length, newContent });
+  }
+  if (replacements.length === 0) return htmlContent;
+  let result = "";
+  let lastEnd = 0;
+  for (const r of replacements) {
+    result += htmlContent.slice(lastEnd, r.index);
+    result += r.newContent;
+    lastEnd = r.index + r.length;
+  }
+  result += htmlContent.slice(lastEnd);
+  return result;
+}
+
 export function CodeEditorApp({ id, config }: AppProps) {
   const updateAppConfig = useWorkspaceStore((s) => s.updateAppConfig);
   const registerTool = useToolRegistry((s) => s.registerTool);
@@ -89,6 +196,7 @@ export function CodeEditorApp({ id, config }: AppProps) {
   activeFileRef.current = activeFile;
   const [htmlPreviewOpen, setHtmlPreviewOpen] = useState(false);
   const [htmlPreviewContent, setHtmlPreviewContent] = useState("");
+  const [htmlPreviewTempPath, setHtmlPreviewTempPath] = useState<string | null>(null);
   const [fileTreeRefreshTrigger, setFileTreeRefreshTrigger] = useState(0);
 
   const ensureDirectoryExists = useCallback(async () => {
@@ -239,14 +347,38 @@ export function CodeEditorApp({ id, config }: AppProps) {
     };
   }, [id]);
 
-  const handleHtmlRun = useCallback(() => {
-    setHtmlPreviewContent(currentContent);
-    setHtmlPreviewOpen(true);
-  }, [currentContent]);
-
-  const handleHtmlStop = useCallback(() => {
+  const handleHtmlPreviewClose = useCallback(() => {
+    setHtmlPreviewTempPath((tempPath) => {
+      if (tempPath) deleteFile(tempPath).catch(() => {});
+      return null;
+    });
     setHtmlPreviewOpen(false);
   }, []);
+
+  const handleHtmlRun = useCallback(async () => {
+    if (!activeFile) return;
+    const htmlDir = dirname(activeFile);
+    setError(null);
+    try {
+      const rewritten = await buildHtmlPreviewWithLinkedAssets(
+        currentContent,
+        htmlDir,
+        readFile
+      );
+      await createDirectory(PREVIEW_TEMP_DIR);
+      const tempPath = `${PREVIEW_TEMP_DIR}/${crypto.randomUUID()}.html`;
+      await writeFile(tempPath, rewritten);
+      setHtmlPreviewContent(rewritten);
+      setHtmlPreviewTempPath(tempPath);
+      setHtmlPreviewOpen(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to build preview");
+    }
+  }, [activeFile, currentContent]);
+
+  const handleHtmlStop = useCallback(() => {
+    handleHtmlPreviewClose();
+  }, [handleHtmlPreviewClose]);
 
   const handleCreateEditor = useCallback(
     (view: import("@codemirror/view").EditorView) => {
@@ -256,16 +388,18 @@ export function CodeEditorApp({ id, config }: AppProps) {
           const targetPath = path ?? activeFileRef.current;
           if (targetPath) {
             setContentByPath((prev) => ({ ...prev, [targetPath]: content }));
+            setLoadedContentByPath((prev) => ({ ...prev, [targetPath]: content }));
             if (path) {
               setOpenFiles((prev) => (prev.includes(path) ? prev : [...prev, path]));
               setActiveFile(path);
               setFileTreeRefreshTrigger((t) => t + 1);
             }
           }
-          const v = editorViewRef.current;
-          if (!v) return;
-          const len = v.state.doc.length;
-          v.dispatch({ changes: { from: 0, to: len, insert: content } });
+          // Do not dispatch into the editor here: the visible tab may not have
+          // re-rendered yet, so we could overwrite the wrong file and trigger
+          // onChange for the wrong path. Rely on state only; the editor value
+          // is driven by contentByPath[activeFile] so the correct content will
+          // show when React re-renders.
         },
         setLineHighlight(lineNumbersArr: number[], color: string, durationMs: number) {
           const v = editorViewRef.current;
@@ -462,7 +596,13 @@ export function CodeEditorApp({ id, config }: AppProps) {
           )}
         </div>
       </div>
-      <Dialog open={htmlPreviewOpen} onOpenChange={setHtmlPreviewOpen}>
+      <Dialog
+        open={htmlPreviewOpen}
+        onOpenChange={(open) => {
+          if (!open) handleHtmlPreviewClose();
+          else setHtmlPreviewOpen(true);
+        }}
+      >
         <DialogContent className="max-w-[90vw] w-full h-[85vh] flex flex-col gap-0 p-0 overflow-hidden">
           <DialogHeader className="shrink-0 flex-row items-center justify-between gap-2 border-b border-border px-4 py-2">
             <DialogTitle className="text-sm">HTML Preview</DialogTitle>
