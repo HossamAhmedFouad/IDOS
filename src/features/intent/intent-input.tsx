@@ -36,6 +36,8 @@ export interface IntentInputProps {
   onSubmitting?: () => void;
   /** Called when submit succeeds or when starting with no intent (go to workspace). */
   onSuccess?: () => void;
+  /** Called when submit fails (e.g. API error, invalid key). Receives error message; use to clear parent loading and show modal. */
+  onError?: (message: string) => void;
   /** Label for the submit button (used when submitIcon is not set). */
   submitLabel?: string;
   /** Icon for the submit button (when set, renders icon instead of label). */
@@ -69,6 +71,7 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
   submitLabel = "Go",
   submitIcon: SubmitIcon,
   onIntentChange,
+  onError,
   onAgentSubmit,
   modeSelect,
   keepLoadingAfterAgentSubmit = false,
@@ -222,7 +225,9 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
         }
         onSuccess?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+        const message = err instanceof Error ? err.message : "Unknown error";
+        setError(message);
+        onError?.(message);
       } finally {
         setInternalLoading(false);
       }
@@ -235,6 +240,7 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
       workspaces.length,
       onSubmitting,
       onSuccess,
+      onError,
       onAgentSubmit,
       keepLoadingAfterAgentSubmit,
       geminiApiKey,
@@ -412,14 +418,12 @@ export const IntentInput = forwardRef<IntentInputHandle, IntentInputProps>(funct
         </Button>
       </motion.div>
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
+        <div
           className="absolute left-0 right-0 top-full z-10 mt-2 max-h-32 overflow-y-auto rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
           role="alert"
         >
           <p className="whitespace-pre-wrap break-words">{error}</p>
-        </motion.div>
+        </div>
       )}
       {onAgentSubmit && (
         <AttachmentFilePickerDialog

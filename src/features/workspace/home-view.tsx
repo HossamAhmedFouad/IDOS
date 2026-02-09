@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutGrid, Play, Sparkles, Settings } from "lucide-react";
+import { AlertCircle, LayoutGrid, Play, Sparkles, Settings } from "lucide-react";
 import {
   useWorkspaceStore,
   selectActiveWorkspaceConfig,
@@ -21,6 +21,13 @@ import { WallpaperBackground } from "@/components/wallpaper-background";
 import { Taskbar, TASKBAR_HEIGHT_PX } from "@/components/taskbar";
 import { FullscreenButton } from "@/components/fullscreen-button";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { computeLayout } from "./layout-engine";
 import { AppRenderer } from "./app-renderer";
@@ -82,6 +89,7 @@ export function HomeView() {
   const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
   const hasGeminiKey = !!geminiApiKey?.trim();
   const [loading, setLoading] = useState(false);
+  const [intentError, setIntentError] = useState<string | null>(null);
 
   const handleAgentSubmit = useCallback(
     (
@@ -362,6 +370,10 @@ export function HomeView() {
                     onIntentChange={(v) => setIntentLength(v.length)}
                     onSubmitting={() => setLoading(true)}
                     onSuccess={handleSuccess}
+                    onError={(message) => {
+                      setLoading(false);
+                      setIntentError(message);
+                    }}
                     onAgentSubmit={homeAgentMode ? handleAgentSubmit : undefined}
                     keepLoadingAfterAgentSubmit={!!homeAgentMode}
                     modeSelect={{
@@ -419,6 +431,28 @@ export function HomeView() {
 
       {/* Taskbar on home too */}
       <Taskbar />
+
+      {/* Error modal: above all (z-[9999]) so it always appears on home after parse-intent fails */}
+      <Dialog open={!!intentError} onOpenChange={(open) => !open && setIntentError(null)}>
+        <DialogContent
+          overlayClassName="z-[9999]"
+          className="z-[9999] sm:max-w-md"
+          onPointerDownOutside={() => setIntentError(null)}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="size-5 shrink-0" />
+              Error
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground whitespace-pre-wrap break-words">
+            {intentError}
+          </p>
+          <DialogFooter>
+            <Button onClick={() => setIntentError(null)}>Dismiss</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
