@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import type { AppProps } from "@/lib/types";
 import { readFile, writeFile } from "@/lib/file-system";
 import { useToolRegistry } from "@/store/use-tool-registry";
@@ -17,6 +17,47 @@ interface Task {
   text: string;
   done: boolean;
 }
+
+const TaskRow = memo(function TaskRow({
+  task,
+  onToggle,
+  onDelete,
+}: {
+  task: Task;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  return (
+    <li
+      id={task.id}
+      data-task-id={task.id}
+      className="flex items-center gap-2 rounded border border-border bg-muted px-3 py-2"
+    >
+      <span className="task-checkbox inline-flex items-center">
+        <input
+          type="checkbox"
+          checked={task.done}
+          onChange={() => onToggle(task.id)}
+          className="h-4 w-4 rounded border-border"
+        />
+      </span>
+      <span
+        className={`flex-1 text-sm ${
+          task.done ? "text-muted-foreground line-through" : "text-foreground"
+        }`}
+      >
+        {task.text}
+      </span>
+      <button
+        type="button"
+        onClick={() => onDelete(task.id)}
+        className="text-muted-foreground hover:text-destructive"
+      >
+        ×
+      </button>
+    </li>
+  );
+});
 
 function loadTasksFromJson(json: string): Task[] {
   try {
@@ -68,10 +109,11 @@ export function TodoApp({ id, config }: AppProps) {
   }, [view, agentDataVersion, loadTasks]);
 
   const saveTasks = useCallback(async (newTasks: Task[]) => {
-    setSaving(true);
+    const showSavingAfter = setTimeout(() => setSaving(true), 300);
     try {
       await writeFile(filePath, JSON.stringify(newTasks, null, 2));
     } finally {
+      clearTimeout(showSavingAfter);
       setSaving(false);
     }
   }, [filePath]);
@@ -84,25 +126,31 @@ export function TodoApp({ id, config }: AppProps) {
       text,
       done: false,
     };
-    const newTasks = [...tasks, newTask];
-    setTasks(newTasks);
     setInput("");
-    saveTasks(newTasks);
-  }, [input, tasks, saveTasks]);
+    setTasks((prev) => {
+      const next = [...prev, newTask];
+      queueMicrotask(() => saveTasks(next));
+      return next;
+    });
+  }, [input, saveTasks]);
 
   const toggleTask = useCallback((id: string) => {
-    const newTasks = tasks.map((t) =>
-      t.id === id ? { ...t, done: !t.done } : t
-    );
-    setTasks(newTasks);
-    saveTasks(newTasks);
-  }, [tasks, saveTasks]);
+    setTasks((prev) => {
+      const next = prev.map((t) =>
+        t.id === id ? { ...t, done: !t.done } : t
+      );
+      queueMicrotask(() => saveTasks(next));
+      return next;
+    });
+  }, [saveTasks]);
 
   const deleteTask = useCallback((id: string) => {
-    const newTasks = tasks.filter((t) => t.id !== id);
-    setTasks(newTasks);
-    saveTasks(newTasks);
-  }, [tasks, saveTasks]);
+    setTasks((prev) => {
+      const next = prev.filter((t) => t.id !== id);
+      queueMicrotask(() => saveTasks(next));
+      return next;
+    });
+  }, [saveTasks]);
 
   if (loading) {
     return (
@@ -131,35 +179,12 @@ export function TodoApp({ id, config }: AppProps) {
       )}
       <ul id={`${id}-list`} data-task-list className="flex-1 space-y-2 overflow-auto">
         {tasks.map((task) => (
-          <li
-            id={task.id}
-            data-task-id={task.id}
+          <TaskRow
             key={task.id}
-            className="flex items-center gap-2 rounded border border-border bg-muted px-3 py-2"
-          >
-            <span className="task-checkbox inline-flex items-center">
-              <input
-                type="checkbox"
-                checked={task.done}
-                onChange={() => toggleTask(task.id)}
-                className="h-4 w-4 rounded border-border"
-              />
-            </span>
-            <span
-              className={`flex-1 text-sm ${
-                task.done ? "text-muted-foreground line-through" : "text-foreground"
-              }`}
-            >
-              {task.text}
-            </span>
-            <button
-              type="button"
-              onClick={() => deleteTask(task.id)}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              ×
-            </button>
-          </li>
+            task={task}
+            onToggle={toggleTask}
+            onDelete={deleteTask}
+          />
         ))}
         <li key="todo-list-bottom" id="todo-list-bottom" className="h-0 overflow-hidden" aria-hidden />
       </ul>

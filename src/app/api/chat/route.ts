@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL ?? "gemini-2.0-flash";
+const CHAT_MODEL = process.env.GEMINI_CHAT_MODEL ?? "gemini-3-flash-preview";
 
 export async function POST(request: Request) {
   try {
     const apiKey = process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured. Add it to .env (see .env.example)." },
+        { error: "Chat is not available right now. Please check your configuration." },
         { status: 503 }
       );
     }
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     if (!lastUserContent && messages.length === 0) {
       return NextResponse.json(
-        { error: "Send 'message' (string) or 'messages' array with at least one user message." },
+        { error: "Your message couldn't be sent. Please try again." },
         { status: 400 }
       );
     }
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     const textToSend = lastUserContent ?? (history.length ? history[history.length - 1].parts[0].text : "");
     if (!textToSend) {
       return NextResponse.json(
-        { error: "No message text to send." },
+        { error: "Your message couldn't be sent. Please try again." },
         { status: 400 }
       );
     }
@@ -54,16 +54,15 @@ export async function POST(request: Request) {
 
     if (reply == null || reply === "") {
       return NextResponse.json(
-        { error: "Empty response from AI." },
+        { error: "The assistant couldn't generate a response. Please try again." },
         { status: 502 }
       );
     }
 
     return NextResponse.json({ message: reply });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+  } catch {
     return NextResponse.json(
-      { error: message },
+      { error: "Something went wrong. Please try again later." },
       { status: 500 }
     );
   }
