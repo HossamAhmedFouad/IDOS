@@ -120,10 +120,23 @@ export function Taskbar() {
       initial={{ y: TASKBAR_HEIGHT }}
       animate={{ y: 0 }}
       transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-center gap-1 border-t border-border/80 bg-background/90 pt-2 pb-5 backdrop-blur-md transition-opacity"
+      className="absolute bottom-0 left-0 right-0 z-40 flex items-center justify-between gap-2 border-t border-border/80 bg-background/90 px-4 pt-2 pb-5 backdrop-blur-md transition-opacity"
       style={{ height: TASKBAR_HEIGHT }}
     >
-      <div className="flex items-center gap-2 rounded-lg px-2">
+      <div
+        className="gemini-badge pointer-events-none flex shrink-0 items-center gap-2 rounded-md border border-primary/30 bg-background/60 px-2.5 py-1.5"
+        aria-hidden
+      >
+        <span className="gemini-badge-text text-xs font-semibold tracking-wide">
+          Powered by Gemini
+        </span>
+        <img
+          src="/gemini_logo.png"
+          alt=""
+          className="gemini-logo-rotate size-5 shrink-0 object-contain"
+        />
+      </div>
+      <div className="flex flex-1 items-center justify-center gap-2 rounded-lg px-2">
         <motion.button
           type="button"
           whileHover={{ scale: 1.12 }}
